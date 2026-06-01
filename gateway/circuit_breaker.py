@@ -1,0 +1,61 @@
+import time
+from enum import Enum
+from redis_client import redis
+
+
+class CBState(str, Enum):
+    CLOSED = "closed"
+    OPEN = "open"
+    HALF_OPEN = "half_open"
+
+
+async def get_cb_state(provider: str) -> dict:
+    key = f"cb:{provider}"
+    data = await redis.hgetall(key)
+    if not data:
+        return {"status": CBState.CLOSED, "failure_count": 0, "last_failure_time": 0}
+    return {
+        "status": CBState(data.get("status", "closed")),
+        "failure_count": int(data.get("failure_count", 0)),
+        "last_failure_time": float(data.get("last_failure_time", 0)),
+    }
+
+
+async def should_attempt(provider: str, config: dict) -> bool:
+    state = await get_cb_state(provider)
+    if state["status"] == CBState.CLOSED:
+        return True
+    if state["status"] == CBState.OPEN:
+        elapsed = time.time() - state["last_failure_time"]
+        if elapsed > config["half_open_ttl"]:
+            await redis.hset(f"cb:{provider}", "status", CBState.HALF_OPEN)
+            return True
+        return False
+    return True
+
+
+async def record_success(provider: str):
+    await redis.hset(f"cb:{provider}", mapping={
+        "status": CBState.CLOSED,
+        "failure_count": "0",
+        "last_failure_time": "0",
+    })
+
+
+async def record_failure(provider: str, config: dict):
+    key = f"cb:{provider}"
+    current = await redis.hget(key, "failure_count")
+    count = int(current or 0) + 1
+
+    if count >= config["failure_threshold"]:
+        await redis.hset(key, mapping={
+            "status": CBState.OPEN,
+            "failure_count": str(count),
+            "last_failure_time": str(time.time()),
+        })
+    else:
+        await redis.hset(key, mapping={
+            "status": CBState.CLOSED,
+            "failure_count": str(count),
+            "last_failure_time": str(time.time()),
+        })
