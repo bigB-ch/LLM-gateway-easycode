@@ -1,9 +1,14 @@
+import uuid
+import os
 import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import select
 
-from database import init_db
+from database import init_db, async_session
+from models.user import User
+from crypto import hash_password
 from routes.auth import router as auth_router
 from routes.keys import router as keys_router
 from routes.users import router as users_router
@@ -15,6 +20,23 @@ from consumer import run_consumer
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+
+    # Auto-create admin user on first startup
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
+    admin_password = os.getenv("ADMIN_PASSWORD", "admin123")
+    async with async_session() as session:
+        result = await session.execute(select(User).where(User.email == admin_email))
+        if result.scalar_one_or_none() is None:
+            admin_user = User(
+                id=uuid.uuid4(),
+                username="admin",
+                email=admin_email,
+                password_hash=hash_password(admin_password),
+                role="super_admin",
+            )
+            session.add(admin_user)
+            await session.commit()
+
     consumer_task = asyncio.create_task(run_consumer())
     yield
     consumer_task.cancel()
