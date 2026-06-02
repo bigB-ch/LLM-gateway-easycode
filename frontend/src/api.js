@@ -4,6 +4,15 @@ function getToken() {
   return localStorage.getItem('access_token')
 }
 
+export function getRole() {
+  return localStorage.getItem('role')
+}
+
+export function isAdmin() {
+  const role = getRole()
+  return role === 'admin' || role === 'super_admin'
+}
+
 async function request(path, options = {}) {
   const headers = { 'Content-Type': 'application/json', ...options.headers }
   const token = getToken()
@@ -12,7 +21,8 @@ async function request(path, options = {}) {
   if (res.status === 401) {
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
-    window.location = '/admin/login'
+    localStorage.removeItem('role')
+    window.location = '/login'
     throw new Error('unauthorized')
   }
   if (!res.ok) {
@@ -23,8 +33,8 @@ async function request(path, options = {}) {
 }
 
 export const api = {
-  login: (email, password) =>
-    request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  login: (login, password) =>
+    request('/auth/login', { method: 'POST', body: JSON.stringify({ login, password }) }),
 
   register: (username, email, password) =>
     request('/auth/register', { method: 'POST', body: JSON.stringify({ username, email, password }) }),

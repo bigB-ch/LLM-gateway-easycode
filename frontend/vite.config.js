@@ -7,6 +7,7 @@ export default defineConfig({
     proxy: {
       '/admin/api': 'http://localhost:8001',
       '/v1': 'http://localhost:8000',
+      '/gateway/admin': 'http://localhost:8000',
     }
   }
 })

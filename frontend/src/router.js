@@ -1,29 +1,78 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { isAdmin } from './api'
+
+// Layouts
+import UserLayout from './layouts/UserLayout.vue'
+import AdminLayout from './layouts/AdminLayout.vue'
+
+// User pages
 import Login from './pages/Login.vue'
 import Register from './pages/Register.vue'
 import Dashboard from './pages/Dashboard.vue'
 import Keys from './pages/Keys.vue'
 import Plans from './pages/Plans.vue'
 import Usage from './pages/Usage.vue'
+import Playground from './pages/Playground.vue'
+
+// Admin pages
+import AdminDashboard from './pages/AdminDashboard.vue'
+import Suppliers from './pages/Suppliers.vue'
+import Breakers from './pages/Breakers.vue'
+import Users from './pages/Users.vue'
+import PlanManager from './pages/PlanManager.vue'
 
 const routes = [
-  { path: '/admin/login', component: Login },
-  { path: '/admin/register', component: Register },
-  { path: '/admin', component: Dashboard, meta: { auth: true } },
-  { path: '/admin/keys', component: Keys, meta: { auth: true } },
-  { path: '/admin/plans', component: Plans, meta: { auth: true } },
-  { path: '/admin/usage', component: Usage, meta: { auth: true } },
-  { path: '/:pathMatch(.*)*', redirect: '/admin' },
+  // Public
+  { path: '/login', component: Login },
+  { path: '/register', component: Register },
+
+  // User portal
+  {
+    path: '/',
+    component: UserLayout,
+    meta: { auth: true },
+    children: [
+      { path: '', component: Dashboard },
+      { path: 'keys', component: Keys },
+      { path: 'plans', component: Plans },
+      { path: 'usage', component: Usage },
+      { path: 'playground', component: Playground },
+    ],
+  },
+
+  // Admin portal
+  {
+    path: '/admin',
+    component: AdminLayout,
+    meta: { auth: true, admin: true },
+    children: [
+      { path: '', component: AdminDashboard },
+      { path: 'suppliers', component: Suppliers },
+      { path: 'breakers', component: Breakers },
+      { path: 'users', component: Users },
+      { path: 'plans', component: PlanManager },
+    ],
+  },
+
+  { path: '/:pathMatch(.*)*', redirect: '/' },
 ]
 
 const router = createRouter({ history: createWebHistory(), routes })
 
+function hasToken() {
+  return !!localStorage.getItem('access_token')
+}
+
 router.beforeEach((to, _from, next) => {
-  if (to.meta.auth && !localStorage.getItem('access_token')) {
-    next('/admin/login')
-  } else {
-    next()
+  if (to.meta.auth && !hasToken()) {
+    next('/login')
+    return
   }
+  if (to.meta.admin && !isAdmin()) {
+    next('/')
+    return
+  }
+  next()
 })
 
 export default router

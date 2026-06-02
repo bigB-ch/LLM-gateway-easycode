@@ -1,44 +1,59 @@
 <template>
-  <div style="max-width:800px;margin:0 auto;padding:32px;">
-    <h2>API Key 管理</h2>
-    <router-link to="/admin">← 返回首页</router-link>
-
-    <div style="margin:24px 0">
-      <button @click="showCreate = true" style="padding:10px 20px;background:#4f46e5;color:white;border:none;border-radius:4px;cursor:pointer">创建新 Key</button>
+  <div>
+    <div class="flex-between mb-24">
+      <h1 class="page-title">令牌管理</h1>
+      <button class="btn btn-primary" @click="showCreate = true" v-if="!showCreate">+ 创建令牌</button>
     </div>
 
-    <div v-if="showCreate" style="background:#f9fafb;padding:24px;border-radius:8px;margin:16px 0">
-      <h4>创建 API Key</h4>
-      <input v-model="newKeyName" placeholder="Key 名称（可选）" style="padding:8px;margin:8px 0;width:100%" />
-      <div style="margin:12px 0">
-        <button @click="createKey" :disabled="creating" style="padding:8px 20px;background:#059669;color:white;border:none;border-radius:4px;cursor:pointer">
-          {{ creating ? '创建中...' : '确认创建' }}
-        </button>
-        <button @click="showCreate = false" style="padding:8px 20px;margin-left:8px;background:#6b7280;color:white;border:none;border-radius:4px;cursor:pointer">取消</button>
+    <div v-if="showCreate" class="card card-padded mb-24">
+      <div class="form-group">
+        <label class="form-label">令牌名称</label>
+        <input v-model="newKeyName" class="form-input" placeholder="例如：生产环境" style="max-width:360px" />
       </div>
-      <div v-if="newKey" style="background:#fef3c7;padding:16px;border-radius:4px;margin-top:16px">
-        <strong>新 Key（仅显示一次，请立即复制保存）：</strong>
-        <code style="display:block;margin-top:8px;word-break:break-all">{{ newKey }}</code>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" @click="createKey" :disabled="creating">{{ creating ? '创建中...' : '确认创建' }}</button>
+        <button class="btn btn-outline" @click="showCreate = false">取消</button>
+      </div>
+      <div v-if="newKey" class="alert alert-success mt-16">
+        <strong>新令牌已生成（仅显示一次，请立即复制保存）：</strong>
+        <div class="code-block mt-8">{{ newKey }}</div>
       </div>
     </div>
 
-    <div v-if="keys.length">
-      <div v-for="key in keys" :key="key.id" style="border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin:8px 0">
-        <div style="display:flex;justify-content:space-between">
-          <div>
-            <code style="font-size:16px">{{ key.key_prefix }}****</code>
-            <span v-if="key.name" style="margin-left:8px;color:#6b7280">{{ key.name }}</span>
-            <span :style="'margin-left:8px;padding:2px 8px;border-radius:4px;font-size:12px;' + (key.status === 'active' ? 'background:#d1fae5;color:#059669' : 'background:#fee2e2;color:#dc2626')">{{ key.status }}</span>
-          </div>
-          <button v-if="key.status === 'active'" @click="revokeKey(key.id)" style="padding:4px 12px;background:#dc2626;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px">吊销</button>
-        </div>
-        <div style="color:#9ca3af;font-size:12px;margin-top:8px">
-          创建于 {{ new Date(key.created_at).toLocaleDateString() }}
-          <span v-if="key.last_used_at"> · 最后使用 {{ new Date(key.last_used_at).toLocaleString() }}</span>
-        </div>
+    <div class="card">
+      <div class="table-wrap" style="border:none" v-if="keys.length">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>令牌</th>
+              <th>名称</th>
+              <th>状态</th>
+              <th>创建时间</th>
+              <th>最后使用</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="key in keys" :key="key.id">
+              <td><span class="key-masked">{{ key.key_prefix }}****</span></td>
+              <td><span class="text-secondary">{{ key.name || '-' }}</span></td>
+              <td><span :class="'badge ' + (key.status === 'active' ? 'badge-success' : 'badge-danger')">{{ key.status === 'active' ? '活跃' : '已吊销' }}</span></td>
+              <td class="text-secondary">{{ new Date(key.created_at).toLocaleDateString() }}</td>
+              <td class="text-secondary">{{ key.last_used_at ? new Date(key.last_used_at).toLocaleString() : '-' }}</td>
+              <td>
+                <button v-if="key.status === 'active'" class="btn btn-danger btn-sm" @click="revokeKey(key.id)">吊销</button>
+                <span v-else class="text-muted">-</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div v-else-if="!showCreate" class="empty-state">
+        <div class="empty-state-icon">&#x1F511;</div>
+        <div class="empty-state-text">暂无令牌</div>
+        <div class="empty-state-sub">点击上方按钮创建您的第一个 API 令牌</div>
       </div>
     </div>
-    <div v-else-if="!showCreate" style="color:#9ca3af;text-align:center;margin:48px 0">还没有 API Key</div>
   </div>
 </template>
 
@@ -65,15 +80,11 @@ async function createKey() {
     const list = await api.listKeys()
     keys.value = list.items
     newKeyName.value = ''
-  } catch (e) {
-    alert(e.message)
-  } finally {
-    creating.value = false
-  }
+  } catch (e) { alert(e.message) } finally { creating.value = false }
 }
 
 async function revokeKey(id) {
-  if (!confirm('确定吊销此 Key？吊销后立即失效。')) return
+  if (!confirm('确定吊销此令牌？吊销后立即失效。')) return
   await api.revokeKey(id)
   const data = await api.listKeys()
   keys.value = data.items

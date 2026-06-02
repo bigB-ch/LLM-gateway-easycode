@@ -25,5 +25,9 @@ class BaseAdapter(ABC):
     async def health_check(self) -> bool:
         ...
 
+    async def get_balance(self) -> dict | None:
+        """Return {'balance': float, 'currency': str} or None if not supported."""
+        return None
+
     def matches(self, model: str) -> bool:
         return any(model.startswith(p) for p in self.model_patterns)

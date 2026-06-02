@@ -49,6 +49,27 @@ class OpenAIAdapter(BaseAdapter):
             provider="openai",
         )
 
+    async def get_balance(self) -> dict | None:
+        """Query OpenAI billing: returns today's cost as a proxy (no direct balance API)."""
+        try:
+            from datetime import datetime, timezone
+            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            client = await self.get_client()
+            resp = await client.get(
+                f"{self.base_url}/organization/costs?start_date={today}&end_date={today}",
+                headers={"Authorization": f"Bearer {self.api_key}"},
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                total = sum(
+                    float(line.get("line_item", {}).get("amount", 0) or 0)
+                    for line in data.get("data", [])
+                )
+                return {"balance": total, "currency": "USD"}
+        except Exception:
+            pass
+        return None
+
     async def health_check(self) -> bool:
         try:
             client = await self.get_client()

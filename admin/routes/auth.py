@@ -30,7 +30,7 @@ class VerifyCodeRequest(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    login: str  # username or email
     password: str
 
 
@@ -45,6 +45,10 @@ async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
     existing = await get_user_by_email(db, req.email)
     if existing:
         raise HTTPException(status_code=409, detail={"error": "email_exists"})
+    from services.auth_service import validate_password
+    pw_error = validate_password(req.password)
+    if pw_error:
+        raise HTTPException(status_code=422, detail={"error": pw_error})
     user = await register_user(db, req.username, req.email, req.password)
     r = redis_client.redis
     ok = await send_verification_code(r, req.email)
@@ -79,7 +83,11 @@ async def verify_code(req: VerifyCodeRequest, db: AsyncSession = Depends(get_db)
 
 @router.post("/login")
 async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
-    user = await authenticate_user(db, req.email, req.password)
+    from services.auth_service import authenticate_user_by_username
+    if "@" in req.login:
+        user = await authenticate_user(db, req.login, req.password)
+    else:
+        user = await authenticate_user_by_username(db, req.login, req.password)
     if user is None:
         raise HTTPException(status_code=401, detail={"error": "invalid_credentials"})
     access_token = create_access_token(str(user.id), user.role)

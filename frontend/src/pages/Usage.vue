@@ -1,36 +1,39 @@
 <template>
-  <div style="max-width:800px;margin:0 auto;padding:32px;">
-    <h2>用量明细</h2>
-    <router-link to="/admin">← 返回首页</router-link>
+  <div>
+    <h1 class="page-title mb-24">使用日志</h1>
 
-    <table style="width:100%;border-collapse:collapse;margin-top:24px">
-      <thead>
-        <tr style="border-bottom:2px solid #e5e7eb;text-align:left">
-          <th style="padding:8px">时间</th>
-          <th style="padding:8px">模型</th>
-          <th style="padding:8px">Token</th>
-          <th style="padding:8px">费用</th>
-          <th style="padding:8px">状态</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="log in logs" :key="log.id" style="border-bottom:1px solid #f3f4f6">
-          <td style="padding:8px;font-size:13px">{{ new Date(log.created_at).toLocaleString() }}</td>
-          <td style="padding:8px;font-size:13px">{{ log.model }}</td>
-          <td style="padding:8px;font-size:13px">{{ log.prompt_tokens + log.completion_tokens }}</td>
-          <td style="padding:8px">¥{{ log.cost_yuan }}</td>
-          <td style="padding:8px">
-            <span :style="'padding:2px 6px;border-radius:4px;font-size:12px;' + (log.status === 'success' ? 'background:#d1fae5;color:#059669' : 'background:#fee2e2;color:#dc2626')">{{ log.status }}</span>
-          </td>
-        </tr>
-        <tr v-if="logs.length === 0">
-          <td colspan="5" style="text-align:center;padding:48px;color:#9ca3af">暂无使用记录</td>
-        </tr>
-      </tbody>
-    </table>
-    <div style="margin-top:16px;text-align:center">
-      <button v-if="page > 1" @click="loadPage(page - 1)" style="padding:8px 16px;margin:0 4px;border:1px solid #d1d5db;background:white;border-radius:4px;cursor:pointer">上一页</button>
-      <button @click="loadPage(page + 1)" style="padding:8px 16px;margin:0 4px;border:1px solid #d1d5db;background:white;border-radius:4px;cursor:pointer">下一页</button>
+    <div class="card">
+      <div class="table-wrap" style="border:none" v-if="logs.length">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>时间</th>
+              <th>模型</th>
+              <th>Token 用量</th>
+              <th>费用</th>
+              <th>状态</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="log in logs" :key="log.id">
+              <td class="text-secondary">{{ new Date(log.created_at).toLocaleString() }}</td>
+              <td><span class="inline-code">{{ log.model }}</span></td>
+              <td>{{ (log.prompt_tokens + log.completion_tokens).toLocaleString() }}</td>
+              <td>&yen;{{ log.cost_yuan }}</td>
+              <td><span :class="'badge ' + (log.status === 'success' ? 'badge-success' : 'badge-danger')">{{ log.status === 'success' ? '成功' : '失败' }}</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div v-else class="empty-state">
+        <div class="empty-state-icon">&#x1F4C4;</div>
+        <div class="empty-state-text">暂无使用记录</div>
+      </div>
+    </div>
+
+    <div v-if="logs.length" class="text-center mt-24" style="display:flex;justify-content:center;gap:8px">
+      <button class="btn btn-outline" v-if="page > 1" @click="loadPage(page - 1)">上一页</button>
+      <button class="btn btn-outline" @click="loadPage(page + 1)">下一页</button>
     </div>
   </div>
 </template>

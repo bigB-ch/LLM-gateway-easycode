@@ -23,6 +23,10 @@ def set_adapters(adapters):
     _adapters = adapters
 
 
+def get_adapters():
+    return _adapters
+
+
 @router.post("/chat/completions")
 async def chat_completions(request: Request):
     # 1. Auth
@@ -127,7 +131,24 @@ async def chat_completions(request: Request):
 @router.get("/models")
 async def list_models():
     models = []
+    seen = set()
     for adapter in _adapters:
         for pattern in adapter.model_patterns:
-            models.append({"id": pattern.rstrip("-*"), "object": "model"})
+            if pattern.endswith("-"):
+                for m in _KNOWN_MODELS.get(adapter.provider_name, []):
+                    if m not in seen:
+                        seen.add(m)
+                        models.append({"id": m, "object": "model", "provider": adapter.provider_name})
+            else:
+                if pattern not in seen:
+                    seen.add(pattern)
+                    models.append({"id": pattern, "object": "model", "provider": adapter.provider_name})
     return {"object": "list", "data": models}
+
+_KNOWN_MODELS = {
+    "openai": ["gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4", "gpt-3.5-turbo", "o1", "o3", "o3-mini"],
+    "deepseek": ["deepseek-v4-flash", "deepseek-v4-pro"],
+    "qwen": ["qwen-plus", "qwen-max", "qwen-turbo"],
+    "anthropic": ["claude-sonnet-4-20250514", "claude-3-5-haiku-20241022"],
+    "google": ["gemini-2.5-flash", "gemini-2.5-pro"],
+}

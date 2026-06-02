@@ -8,6 +8,19 @@ from crypto import hash_password, verify_password, generate_verification_code
 import redis_client
 
 
+def validate_password(password: str) -> str | None:
+    """Return error message if password is invalid, or None if valid."""
+    if len(password) < 8:
+        return "密码至少 8 位"
+    if not any(c.isupper() for c in password):
+        return "密码需包含大写字母"
+    if not any(c.islower() for c in password):
+        return "密码需包含小写字母"
+    if not any(c.isdigit() for c in password):
+        return "密码需包含数字"
+    return None
+
+
 async def register_user(db: AsyncSession, username: str, email: str, password: str) -> User:
     password_hash = hash_password(password)
     user = User(
@@ -65,6 +78,22 @@ async def verify_code_and_activate(redis, db: AsyncSession, email: str, code: st
 
 async def authenticate_user(db: AsyncSession, email: str, password: str) -> User | None:
     user = await get_user_by_email(db, email)
+    if user is None:
+        return None
+    if user.status != "active":
+        return None
+    if not verify_password(password, user.password_hash):
+        return None
+    return user
+
+
+async def get_user_by_username(db: AsyncSession, username: str) -> User | None:
+    result = await db.execute(select(User).where(User.username == username))
+    return result.scalar_one_or_none()
+
+
+async def authenticate_user_by_username(db: AsyncSession, username: str, password: str) -> User | None:
+    user = await get_user_by_username(db, username)
     if user is None:
         return None
     if user.status != "active":

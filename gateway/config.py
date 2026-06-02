@@ -12,6 +12,9 @@ else:
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379")
 
+JWT_SECRET = os.getenv("JWT_SECRET", "dev-secret")
+JWT_ALGORITHM = "HS256"
+
 CIRCUIT_BREAKER_CONFIG = {
     "openai":       {"failure_threshold": 5, "timeout_seconds": 30, "half_open_ttl": 30},
     "anthropic":    {"failure_threshold": 5, "timeout_seconds": 30, "half_open_ttl": 30},

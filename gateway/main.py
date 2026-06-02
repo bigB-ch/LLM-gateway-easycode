@@ -40,7 +40,10 @@ app.add_middleware(
 
 Instrumentator().instrument(app).expose(app)
 
+from admin_routes import router as admin_router
+
 app.include_router(gateway_router)
+app.include_router(admin_router)
 
 
 @app.get("/health")
