@@ -1,0 +1,56 @@
+const BASE = '/admin/api'
+
+function getToken() {
+  return localStorage.getItem('access_token')
+}
+
+async function request(path, options = {}) {
+  const headers = { 'Content-Type': 'application/json', ...options.headers }
+  const token = getToken()
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  const res = await fetch(`${BASE}${path}`, { ...options, headers })
+  if (res.status === 401) {
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('refresh_token')
+    window.location = '/admin/login'
+    throw new Error('unauthorized')
+  }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'request_failed' }))
+    throw new Error(err.error || 'request_failed')
+  }
+  return res.json()
+}
+
+export const api = {
+  login: (email, password) =>
+    request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+
+  register: (username, email, password) =>
+    request('/auth/register', { method: 'POST', body: JSON.stringify({ username, email, password }) }),
+
+  sendCode: (email) =>
+    request('/auth/send-code', { method: 'POST', body: JSON.stringify({ email }) }),
+
+  verifyCode: (email, code) =>
+    request('/auth/verify-code', { method: 'POST', body: JSON.stringify({ email, code }) }),
+
+  getMe: () => request('/auth/me'),
+
+  getDashboard: () => request('/reports/dashboard'),
+
+  getTrend: (days = 7) => request(`/reports/trend?days=${days}`),
+
+  getUsage: (page = 1) => request(`/reports/usage?page=${page}`),
+
+  createKey: (name, rateLimit = 60) =>
+    request('/keys', { method: 'POST', body: JSON.stringify({ name, rate_limit: rateLimit }) }),
+
+  listKeys: () => request('/keys'),
+
+  revokeKey: (id) => request(`/keys/${id}/revoke`, { method: 'POST' }),
+
+  getPlans: () => request('/plans'),
+
+  purchasePlan: (planId) => request(`/plans/${planId}/purchase`, { method: 'POST' }),
+}
