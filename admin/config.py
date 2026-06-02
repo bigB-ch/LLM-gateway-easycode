@@ -1,7 +1,14 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+# 支持从 DOTENV_PATH 环境变量加载 .env 文件
+env_path = os.getenv("DOTENV_PATH")
+if env_path:
+    load_dotenv(env_path)
+else:
+    # Docker 模式：尝试加载 .env，不存在就用默认值
+    load_dotenv()
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
