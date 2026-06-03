@@ -128,3 +128,36 @@ async def me(user: dict = Depends(get_current_user), db: AsyncSession = Depends(
     if u is None:
         raise HTTPException(status_code=404)
     return {"id": str(u.id), "username": u.username, "email": u.email, "role": u.role, "balance": u.balance}
+
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str
+
+
+@router.put("/password")
+async def change_password(
+    req: ChangePasswordRequest,
+    user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from models.user import User
+    from sqlalchemy import select
+    from crypto import verify_password, hash_password
+    from services.auth_service import validate_password
+
+    result = await db.execute(select(User).where(User.id == user["user_id"]))
+    u = result.scalar_one_or_none()
+    if u is None:
+        raise HTTPException(status_code=404)
+
+    if not verify_password(req.old_password, u.password_hash):
+        raise HTTPException(status_code=400, detail={"error": "旧密码错误"})
+
+    pw_error = validate_password(req.new_password)
+    if pw_error:
+        raise HTTPException(status_code=422, detail={"error": pw_error})
+
+    u.password_hash = hash_password(req.new_password)
+    await db.commit()
+    return {"message": "密码修改成功"}

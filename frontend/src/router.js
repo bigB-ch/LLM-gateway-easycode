@@ -13,6 +13,8 @@ import Keys from './pages/Keys.vue'
 import Plans from './pages/Plans.vue'
 import Usage from './pages/Usage.vue'
 import Playground from './pages/Playground.vue'
+import Settings from './pages/Settings.vue'
+import Models from './pages/Models.vue'
 
 // Admin pages
 import AdminDashboard from './pages/AdminDashboard.vue'
@@ -37,6 +39,8 @@ const routes = [
       { path: 'plans', component: Plans },
       { path: 'usage', component: Usage },
       { path: 'playground', component: Playground },
+      { path: 'settings', component: Settings },
+      { path: 'models', component: Models },
     ],
   },
 

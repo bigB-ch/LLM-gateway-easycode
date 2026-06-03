@@ -1,69 +1,129 @@
 <template>
   <header class="topbar">
     <div class="topbar-left">
-      <router-link to="/" class="topbar-logo"><LogoIcon :size="28" style="vertical-align:middle;margin-right:8px" /><span>Easy</span>Code</router-link>
+      <router-link to="/" class="topbar-logo">
+        <LogoIcon :size="28" style="vertical-align:middle;margin-right:8px" /><span>Easy</span>Code
+      </router-link>
       <nav class="topbar-nav">
-        <router-link to="/" :class="{ active: isActive('/') }">控制台</router-link>
-        <router-link to="/playground" :class="{ active: isActive('/playground') }">Playground</router-link>
+        <router-link to="/" exact-active-class="active">{{ t('home') }}</router-link>
+        <router-link to="/" :class="{ active: isConsole }">{{ t('console') }}</router-link>
+        <router-link to="/models" active-class="active">{{ t('marketplace') }}</router-link>
+        <router-link to="/playground" active-class="active">{{ t('playground') }}</router-link>
       </nav>
     </div>
 
     <div class="topbar-right">
-      <button class="topbar-bell" title="通知">
+      <button class="topbar-bell" title="通知" @click.stop="showNoti = !showNoti">
         &#x1F514;
-        <span class="dot"></span>
+        <span class="bell-badge" v-if="notiCount > 0">{{ notiCount > 99 ? '99+' : notiCount }}</span>
+      </button>
+      <button class="topbar-icon-btn" title="切换主题" @click="toggleTheme">
+        {{ isDark ? '&#x263E;' : '&#x2600;' }}
+      </button>
+      <button class="topbar-icon-btn" :title="t('language')" @click="handleToggleLang">
+        {{ locale === 'zh' ? '中' : 'EN' }}
       </button>
 
-      <div class="topbar-avatar" @click="goAdmin" v-if="isAdmin" title="进入管理端">
-        <span style="font-size:11px;color:var(--primary);font-weight:600;margin-right:4px">管理</span>
-      </div>
-
-      <div class="topbar-avatar" @click="toggleMenu">
+      <div class="topbar-avatar" @click.stop="menuOpen = !menuOpen">
         <div class="avatar-circle">{{ avatarChar }}</div>
         <span class="avatar-name">{{ userName }}</span>
       </div>
 
-      <div v-if="menuOpen" class="dropdown" @click.self="menuOpen = false">
-        <div class="dropdown-item" @click="goProfile">个人设置</div>
-        <div class="dropdown-item" @click="goAdmin" v-if="isAdmin">管理后台</div>
+      <div v-if="menuOpen" class="topbar-dropdown" @click.stop>
+        <div class="dropdown-header">{{ userName }}</div>
+        <div class="dropdown-item" @click="goPage('/settings')">&#x2699;&#xFE0F; {{ t('profile') }}</div>
+        <div class="dropdown-item" @click="goPage('/keys')">&#x1F511; {{ t('tokens') }}</div>
+        <div class="dropdown-item" @click="goPage('/plans')">&#x1F4B0; {{ t('wallet') }}</div>
+        <div v-if="isAdminUser" class="dropdown-item" @click="goAdmin">&#x2696;&#xFE0F; {{ t('admin') }}</div>
         <div class="dropdown-divider"></div>
-        <div class="dropdown-item danger" @click="logout">退出登录</div>
+        <div class="dropdown-item danger" @click="logout">{{ t('logout') }}</div>
+      </div>
+
+      <!-- Notification panel -->
+      <div v-if="showNoti" class="noti-panel" @click.stop>
+        <div class="noti-header">
+          系统通知
+          <button v-if="notifications.length" class="noti-clear" @click="clearAllNoti">全部已读</button>
+        </div>
+        <div v-if="notifications.length" class="noti-list">
+          <div v-for="n in notifications" :key="n.id" class="noti-item" @click="dismissNoti(n.id)">
+            <div class="noti-title">{{ n.title }}</div>
+            <div class="noti-time">{{ n.time }}</div>
+          </div>
+        </div>
+        <div v-else class="noti-empty">暂无通知</div>
       </div>
     </div>
   </header>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { api, isAdmin } from '../api'
+import { useI18n } from '../i18n'
 import LogoIcon from './LogoIcon.vue'
+
+const { t, locale, toggleLang } = useI18n()
 
 const router = useRouter()
 const route = useRoute()
 const userName = ref('')
 const menuOpen = ref(false)
+const showNoti = ref(false)
+const notiCount = ref(1)
+const isDark = ref(false)
+const isAdminUser = computed(() => isAdmin())
 
 const avatarChar = computed(() => userName.value ? userName.value.charAt(0).toUpperCase() : '?')
 
-function isActive(path) {
-  if (path === '/') return route.path === '/'
-  return route.path.startsWith(path)
-}
+const isConsole = computed(() => {
+  const p = route.path
+  return p === '/' || p.startsWith('/keys') || p.startsWith('/usage') || p.startsWith('/plans') || p.startsWith('/settings')
+})
+
+const notifications = ref([
+  { id: 1, title: 'DeepSeek V4 系列模型已上线，欢迎使用', time: '2026-06-03 10:30' },
+])
 
 onMounted(async () => {
   try {
     const user = await api.getMe()
     userName.value = user.username || user.email
   } catch (e) { /* */ }
+  document.addEventListener('click', closeMenu)
 })
 
-function toggleMenu() { menuOpen.value = !menuOpen.value }
-function goProfile() { menuOpen.value = false }
-function goAdmin() { menuOpen.value = false; router.push('/admin') }
+onUnmounted(() => document.removeEventListener('click', closeMenu))
+
+function closeMenu() { menuOpen.value = false; showNoti.value = false }
+function dismissNoti(id) {
+  notifications.value = notifications.value.filter(n => n.id !== id)
+  notiCount.value = notifications.value.length
+}
+function clearAllNoti() {
+  notifications.value = []
+  notiCount.value = 0
+}
+function goPage(p) { router.push(p); menuOpen.value = false }
+function goAdmin() { router.push('/admin'); menuOpen.value = false }
+function toggleTheme() {
+  isDark.value = !isDark.value
+  document.documentElement.classList.toggle('dark', isDark.value)
+  localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
+}
+function handleToggleLang() {
+  toggleLang()
+}
+
+// Init theme from localStorage
+const savedTheme = localStorage.getItem('theme')
+if (savedTheme === 'dark') {
+  isDark.value = true
+  document.documentElement.classList.add('dark')
+}
 
 function logout() {
-  menuOpen.value = false
   localStorage.removeItem('access_token')
   localStorage.removeItem('refresh_token')
   localStorage.removeItem('role')
@@ -72,18 +132,24 @@ function logout() {
 </script>
 
 <style scoped>
-.dropdown {
+.topbar-dropdown {
   position: absolute;
-  top: 52px;
-  right: 16px;
+  top: 52px; right: 16px;
   background: #fff;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 6px 0;
-  min-width: 140px;
+  min-width: 180px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
   z-index: 200;
+  padding: 6px 0;
 }
-
+.dropdown-header {
+  padding: 8px 16px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
 .dropdown-item {
   padding: 8px 16px;
   font-size: 13px;
@@ -92,10 +158,61 @@ function logout() {
 }
 .dropdown-item:hover { background: #f5f5f5; }
 .dropdown-item.danger { color: var(--danger); }
+.dropdown-divider { height: 1px; background: var(--border); margin: 4px 0; }
 
-.dropdown-divider {
-  height: 1px;
-  background: var(--border);
-  margin: 4px 0;
+.bell-badge {
+  position: absolute;
+  top: -2px; right: -2px;
+  min-width: 16px; height: 16px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  line-height: 1;
 }
+
+.noti-panel {
+  position: absolute;
+  top: 52px; right: 120px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: 320px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  z-index: 200;
+  padding: 0;
+}
+.noti-header {
+  padding: 12px 16px;
+  font-weight: 600;
+  font-size: 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.noti-clear {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--primary);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.noti-clear:hover { text-decoration: underline; }
+.noti-list { max-height: 280px; overflow-y: auto; }
+.noti-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-light);
+  cursor: pointer;
+}
+.noti-item:hover { background: #f8f9fb; }
+.noti-title { font-size: 13px; color: var(--text); line-height: 1.5; }
+.noti-time { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+.noti-empty { padding: 32px 16px; text-align: center; color: var(--text-muted); font-size: 13px; }
 </style>

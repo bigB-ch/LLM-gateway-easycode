@@ -1,10 +1,17 @@
 <template>
   <div class="auth-page">
+    <div class="auth-geo-ring"></div>
+    <div class="auth-geo-dot"></div>
+    <div class="auth-geo-bar"></div>
+    <div class="auth-geo-bar2"></div>
     <div class="auth-topbar">
       <router-link to="/" class="auth-logo">
         <LogoIcon :size="48" />
         <span class="brand-text">Easy<span class="brand-accent">Code</span></span>
       </router-link>
+      <button class="topbar-icon-btn" :title="isDark ? '浅色模式' : '暗色模式'" @click="toggleTheme" style="font-size:20px">
+        {{ isDark ? '&#x263E;' : '&#x2600;' }}
+      </button>
     </div>
     <div class="auth-card auth-card-lg">
       <h1>注册</h1>
@@ -51,6 +58,13 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../api'
 import LogoIcon from '../components/LogoIcon.vue'
+
+const isDark = ref(document.documentElement.classList.contains('dark'))
+function toggleTheme() {
+  isDark.value = !isDark.value
+  document.documentElement.classList.toggle('dark', isDark.value)
+  localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
+}
 
 const router = useRouter()
 const step = ref(1)

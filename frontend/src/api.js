@@ -18,7 +18,7 @@ async function request(path, options = {}) {
   const token = getToken()
   if (token) headers['Authorization'] = `Bearer ${token}`
   const res = await fetch(`${BASE}${path}`, { ...options, headers })
-  if (res.status === 401) {
+  if (res.status === 401 && path !== '/auth/login') {
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
     localStorage.removeItem('role')
@@ -27,7 +27,7 @@ async function request(path, options = {}) {
   }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: 'request_failed' }))
-    throw new Error(err.error || 'request_failed')
+    throw new Error(err.error || err.detail?.error || 'request_failed')
   }
   return res.json()
 }
@@ -63,4 +63,7 @@ export const api = {
   getPlans: () => request('/plans'),
 
   purchasePlan: (planId) => request(`/plans/${planId}/purchase`, { method: 'POST' }),
+
+  changePassword: (oldPassword, newPassword) =>
+    request('/auth/password', { method: 'PUT', body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }) }),
 }
