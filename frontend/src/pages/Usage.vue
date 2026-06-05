@@ -17,7 +17,7 @@
         </div>
       </div>
       <button class="btn btn-outline btn-sm" @click="compactView = !compactView">
-        {{ compactView ? '默认视图' : '紧凑列表' }}
+        {{ compactView ? t('defaultView') : t('compactList') }}
       </button>
     </div>
 
@@ -51,15 +51,15 @@
         <div>
           <label class="form-label" style="font-size:11px">状态</label>
           <select v-model="filterStatus" class="form-select" style="width:80px;padding:5px 8px;font-size:12px">
-            <option value="">全部</option>
-            <option value="success">成功</option>
-            <option value="error">失败</option>
+            <option value="">{{ t('all') }}</option>
+            <option value="success">{{ t('success') }}</option>
+            <option value="error">{{ t('error') }}</option>
           </select>
         </div>
         <div style="display:flex;gap:6px;align-self:flex-end">
-          <button class="btn btn-primary btn-sm" @click="doSearch">查询</button>
-          <button class="btn btn-outline btn-sm" @click="resetFilter">重置</button>
-          <button class="btn btn-outline btn-sm">列设置</button>
+          <button class="btn btn-primary btn-sm" @click="doSearch">{{ t('query') }}</button>
+          <button class="btn btn-outline btn-sm" @click="resetFilter">{{ t('reset') }}</button>
+          <button class="btn btn-outline btn-sm">{{ t('columnSettings') }}</button>
         </div>
       </div>
     </div>
@@ -105,8 +105,8 @@
 
       <!-- Pagination -->
       <div style="display:flex;justify-content:center;gap:8px;padding:12px">
-        <button class="btn btn-outline btn-sm" v-if="page > 1" @click="loadPage(page - 1)">上一页</button>
-        <button class="btn btn-outline btn-sm" @click="loadPage(page + 1)">下一页</button>
+        <button class="btn btn-outline btn-sm" v-if="page > 1" @click="loadPage(page - 1)">{{ t('prevPage') }}</button>
+        <button class="btn btn-outline btn-sm" @click="loadPage(page + 1)">{{ t('nextPage') }}</button>
       </div>
     </div>
 
@@ -115,7 +115,7 @@
       <div class="empty-state">
         <div class="empty-state-icon">&#x1F50D;</div>
         <div class="empty-state-text">搜索无结果</div>
-        <div class="empty-state-sub">{{ hasFilter ? '尝试调整筛选条件' : '暂无任何模型调用记录，创建令牌后开始使用 API' }}</div>
+        <div class="empty-state-sub">{{ hasFilter ? t('adjustFilterHint') : t('noUsageData') }}</div>
       </div>
     </div>
 
@@ -143,6 +143,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { api } from '../api'
+import { useI18n } from '../i18n'
+const { t } = useI18n()
 
 const logs = ref([])
 const page = ref(1)
@@ -187,19 +189,20 @@ onMounted(() => loadPage(1))
 async function loadPage(p) {
   page.value = p
   try {
-    const data = await api.getUsage(p)
+    const data = await api.getUsage(p, dateFrom.value || null, dateTo.value || null)
     logs.value = data.items || []
     totalCost.value = data.total_cost_yuan || '0.00'
-    rpm.value = data.avg_rpm || 0
-    tpm.value = data.avg_tpm || 0
+    rpm.value = '-'
+    tpm.value = '-'
   } catch (e) { /* */ }
 }
 
-function doSearch() { /* filteredLogs is reactive */ }
+function doSearch() { loadPage(1) }
 function resetFilter() {
   dateFrom.value = ''; dateTo.value = ''; filterKeyName.value = ''
   filterModel.value = ''; filterGroup.value = ''; filterReqId.value = ''
   filterStatus.value = ''
+  loadPage(1)
 }
 
 function showDetail(log) { detailLog.value = log }

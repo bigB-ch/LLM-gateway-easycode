@@ -1,0 +1,634 @@
+[
+  {
+    "url": "https://ai.huosanyun.com/api/status",
+    "data": {
+      "data": {
+        "HeaderNavModules": "{\"home\":true,\"console\":true,\"pricing\":{\"enabled\":true,\"requireAuth\":false},\"docs\":true,\"about\":false}",
+        "SidebarModulesAdmin": "{\"chat\":{\"enabled\":true,\"playground\":true,\"chat\":false},\"console\":{\"enabled\":true,\"detail\":true,\"token\":true,\"log\":true,\"midjourney\":true,\"task\":true},\"personal\":{\"enabled\":true,\"topup\":true,\"personal\":true},\"admin\":{\"enabled\":true,\"channel\":true,\"models\":true,\"deployment\":true,\"redemption\":true,\"user\":true,\"subscription\":true,\"setting\":true}}",
+        "announcements": [],
+        "announcements_enabled": true,
+        "api_info": [],
+        "api_info_enabled": true,
+        "chats": [
+          {
+            "Cherry Studio": "cherrystudio://providers/api-keys?v=1&data={cherryConfig}"
+          },
+          {
+            "AionUI": "aionui://provider/add?v=1&data={aionuiConfig}"
+          },
+          {
+            "流畅阅读": "fluentread"
+          },
+          {
+            "CC Switch": "ccswitch"
+          },
+          {
+            "Lobe Chat 官方示例": "https://chat-preview.lobehub.com/?settings={\"keyVaults\":{\"openai\":{\"apiKey\":\"{key}\",\"baseURL\":\"{address}/v1\"}}}"
+          },
+          {
+            "AI as Workspace": "https://aiaw.app/set-provider?provider={\"type\":\"openai\",\"settings\":{\"apiKey\":\"{key}\",\"baseURL\":\"{address}/v1\",\"compatibility\":\"strict\"}}"
+          },
+          {
+            "AMA 问天": "ama://set-api-key?server={address}&key={key}"
+          },
+          {
+            "OpenCat": "opencat://team/join?domain={address}&token={key}"
+          }
+        ],
+        "checkin_enabled": false,
+        "custom_currency_exchange_rate": 1,
+        "custom_currency_symbol": "¤",
+        "data_export_default_time": "hour",
+        "default_collapse_sidebar": false,
+        "default_use_auto_group": false,
+        "demo_site_enabled": false,
+        "discord_client_id": "",
+        "discord_oauth": false,
+        "display_in_currency": true,
+        "docs_link": "https://ai.huosanyun.com/docs/api/",
+        "email_verification": false,
+        "enable_batch_update": true,
+        "enable_data_export": true,
+        "enable_drawing": true,
+        "enable_task": true,
+        "faq": [],
+        "faq_enabled": true,
+        "footer_html": "",
+        "github_client_id": "",
+        "github_oauth": false,
+        "linuxdo_client_id": "",
+        "linuxdo_minimum_trust_level": 0,
+        "linuxdo_oauth": false,
+        "logo": "https://ai.huosanyun.com/homepage/assets/logo.png",
+        "mj_notify_enabled": false,
+        "oidc_authorization_endpoint": "",
+        "oidc_client_id": "",
+        "oidc_enabled": false,
+        "passkey_allow_insecure": false,
+        "passkey_attachment": "",
+        "passkey_display_name": "火伞云聚合AI",
+        "passkey_login": false,
+        "passkey_origins": "https://ai.huosanyun.com",
+        "passkey_rp_id": "ai.huosanyun.com",
+        "passkey_user_verification": "preferred",
+        "price": 1,
+        "privacy_policy_enabled": true,
+        "quota_display_type": "CNY",
+        "quota_per_unit": 500000,
+        "self_use_mode_enabled": false,
+        "server_address": "https://ai.huosanyun.com",
+        "setup": true,
+        "start_time": 1780553374,
+        "stripe_unit_price": 8,
+        "system_name": "火伞云聚合AI",
+        "telegram_bot_name": "",
+        "telegram_oauth": false,
+        "top_up_link": "",
+        "turnstile_check": false,
+        "turnstile_site_key": "",
+        "uptime_kuma_enabled": true,
+        "usd_exchange_rate": 1,
+        "user_agreement_enabled": true,
+        "version": "",
+        "wechat_login": false,
+        "wechat_qrcode": ""
+      },
+      "message": "",
+      "success": true
+    }
+  },
+  {
+    "url": "https://ai.huosanyun.com/api/pricing",
+    "data": {
+      "auto_groups": [
+        "default"
+      ],
+      "data": [
+        {
+          "model_name": "deepseek-v4-flash",
+          "description": "高效轻量化MoE模型，总参284B，激活13B，原生支持百万超长上下文能力。推理速度快、延迟低、调用成本低廉，综合能力均衡，主打高并发、轻量化任务，适合日常对话、内容创作、基础 RAG、批量文案处理等普惠刚需场景。",
+          "vendor_id": 19,
+          "quota_type": 0,
+          "model_ratio": 0.5,
+          "model_price": 0,
+          "owner_by": "",
+          "completion_ratio": 2,
+          "cache_ratio": 0.02,
+          "enable_groups": [
+            "default"
+          ],
+          "supported_endpoint_types": [
+            "openai"
+          ],
+          "pricing_version": "5a90f2b86c08bd983a9a2e6d66c255f4eaef9c4bc934386d2b6ae84ef0ff1f1f"
+        },
+        {
+          "model_name": "kimi-k2.6",
+          "description": "Kimi K2.6 是 Kimi 最新最智能的模型，Kimi K2.6 的通用 Agent、代码、视觉理解等综合能力得到全面提升，其中在博士级难度的完整版人类最后的考试（Humanity’s Last Exam）、在考察模型真实软件工程能力的 SWE-Bench Pro、评估 Agent 深度检索能力的 DeepSearchQA 等基准测试中均取得行业领先的成绩，同时支持文本、图片与视频输入，思考与非思考模式，对话与 Agent 任务。",
+          "vendor_id": 23,
+          "quota_type": 0,
+          "model_ratio": 3.25,
+          "model_price": 0,
+          "owner_by": "",
+          "completion_ratio": 4.153846153846,
+          "cache_ratio": 0.153846153846,
+          "enable_groups": [
+            "default"
+          ],
+          "supported_endpoint_types": [
+            "openai"
+          ]
+        },
+        {
+          "model_name": "doubao-seedance-2-0-260128",
+          "description": "豆包大模型团队推出的新一代专业级多模态创作视频模型 Seedance 2.0，支持图像、视频、音频等多模态作为参考输入生成视频，还具备视频编辑、延长等能力，能高精度还原各类细节并稳定角色特征，具备极致拟真的视听稳定性，深度适配商业广告、影视制作与社交媒体营销等各大核心场景",
+          "icon": "Doubao.Color",
+          "tags": "视频生成",
+          "vendor_id": 21,
+          "quota_type": 0,
+          "model_ratio": 25.5,
+          "model_price": 0,
+          "owner_by": "",
+          "completion_ratio": 1,
+          "enable_groups": [
+            "default"
+          ],
+          "supported_endpoint_types": [
+            "openai"
+          ]
+        },
+        {
+          "model_name": "kling-video-o1",
+          "vendor_id": 25,
+          "quota_type": 0,
+          "model_ratio": 37.5,
+          "model_price": 0,
+          "owner_by": "",
+          "completion_ratio": 1,
+          "enable_groups": [
+            "default"
+          ],
+          "supported_endpoint_types": [
+            "openai"
+          ]
+        },
+        {
+          "model_name": "kling-v1",
+          "vendor_id": 25,
+          "quota_type": 0,
+          "model_ratio": 37.5,
+          "model_price": 0,
+          "owner_by": "",
+          "completion_ratio": 1,
+          "enable_groups": [
+            "default"
+          ],
+          "supported_endpoint_types": [
+            "openai"
+          ]
+        },
+        {
+          "model_name": "kimi-k2.5",
+          "description": "Kimi-K2.5 is an AI model provided by tencent-coding-plan.",
+          "icon": "Moonshot",
+          "tags": "Reasoning,Tools,Files,Open Weights,Vision,262.1K",
+          "vendor_id": 23,
+          "quota_type": 0,
+          "model_ratio": 0.275,
+          "model_price": 0,
+          "owner_by": "",
+          "completion_ratio": 5.018182,
+          "enable_groups": [
+            "default"
+          ],
+          "supported_endpoint_types": [
+            "openai"
+          ]
+        },
+        {
+          "model_name": "glm-5",
+          "description": "GLM-5 is an AI model provided by zhipuai-coding-plan.",
+          "icon": "Zhipu.Color",
+          "tags": "Reasoning,Tools,Open Weights,204.8K",
+          "vendor_id": 10,
+          "quota_type": 0,
+          "model_ratio": 0.375,
+          "model_price": 0,
+          "owner_by": "",
+          "completion_ratio": 3.2,
+          "enable_groups": [
+            "default"
+          ],
+          "supported_endpoint_types": [
+            "openai"
+          ]
+        },
+        {
+          "model_name": "kling-v3",
+          "description": "Kling 3.0 AI是于2026年2月5日推出的AI视频生成工具，属于专业级影视生产系统，包含Video 3.0、Image 3.0等系列模型。该产品支持原生2K/4K超高清视频输出，适配大银幕显示需求，通过Canvas Agent实现多角度场景扩展与自动化电影制作流程。",
+          "icon": "Kling.Color",
+          "tags": "文生视频,图生视频",
+          "vendor_id": 25,
+          "quota_type": 1,
+          "model_ratio": 0,
+          "model_price": 1.2,
+          "owner_by": "",
+          "completion_ratio": 0,
+          "enable_groups": [
+            "default"
+          ],
+          "supported_endpoint_types": [
+            "openai"
+          ]
+        },
+        {
+          "model_name": "kling-v2-1",
+          "icon": "Kling.Color",
+          "tags": "文生视频,图生视频",
+          "vendor_id": 25,
+          "quota_type": 1,
+          "model_ratio": 0,
+          "model_price": 0.4,
+          "owner_by": "",
+          "completion_ratio": 0,
+          "enable_groups": [
+            "default"
+          ],
+          "supported_endpoint_types": [
+            "openai"
+          ]
+        },
+        {
+          "model_name": "MiniMax-M2.5",
+          "description": "MiniMax-M2.5是MiniMax推出的旗舰级开源大模型，经过数十万个真实复杂环境中的大规模强化学习训练，M2.5 在编程、工具调用和搜索、办公等生产力场景都达到或者刷新了行业的 SOTA。",
+          "icon": "Minimax.Color",
+          "tags": "Tools,Open Weights,194K",
+          "vendor_id": 46,
+          "quota_type": 0,
+          "model_ratio": 1.05,
+          "model_price": 0,
+          "owner_by": "",
+          "completion_ratio": 4,
+          "enable_groups": [
+            "default"
+          ],
+          "supported_endpoint_types": [
+            "openai"
+          ]
+        },
+        {
+          "model_name": "qwen3.6-plus",
+          "description": "Qwen3.6原生视觉语言系列Plus模型，展现出与当前顶尖前沿模型相媲美的卓越性能，模型效果相较3.5系列显著提升。模型在Agentic coding、前端编程、Vibe coding等代码能力、多模态万物识别、OCR、物体定位等能力上显著增强。\n\n该模型版本功能等同于快照模型qwen3.6-plus-2026-04-02",
+          "tags": "深度思考,视觉理解,文本生成",
+          "vendor_id": 1,
+          "quota_type": 0,
+          "model_ratio": 1,
+          "model_price": 0,
+          "owner_by": "",
+          "completion_ratio": 6,
+          "cache_ratio": 0.1,
+          "create_cache_ratio": 1.25,
+          "enable_groups": [
+            "default"
+          ],
+          "supported_endpoint_types": [
+            "openai"
+          ]
+        },
+        {
+          "model_name": "glm-5.1",
+          "description": "智谱最新大模型，接近sonnet 4.6的编程能力",
+          "icon": "Zhipu.Color",
+          "tags": "文本生成,推理",
+          "vendor_id": 10,
+          "quota_type": 0,
+          "model_ratio": 3,
+          "model_price": 0,
+          "owner_by": "",
+          "completion_ratio": 4,
+          "cache_ratio": 0.2,
+          "create_cache_ratio": 1.25,
+          "enable_groups": [
+            "default"
+          ],
+          "supported_endpoint_types": [
+            "openai"
+          ]
+        },
+        {
+          "model_name": "doubao-seedance-2-0-fast-260128",
+          "description": "Seedance 2.0 fast是豆包大模型团队推出的新一代多模态视频创作模型，它继承了Seedance 2.0模型的核心功能和优势，生成速度更快",
+          "icon": "Doubao.Color",
+          "tags": "视频生成",
+          "vendor_id": 21,
+          "quota_type": 0,
+          "model_ratio": 18.5,
+          "model_price": 0,
+          "owner_by": "",
+          "completion_ratio": 1,
+          "enable_groups": [
+            "default"
+          ],
+          "supported_endpoint_types": [
+            "openai"
+          ]
+        },
+        {
+          "model_name": "kling-v3-omni",
+          "vendor_id": 25,
+          "quota_type": 1,
+          "model_ratio": 0,
+          "model_price": 1,
+          "owner_by": "",
+          "completion_ratio": 0,
+          "enable_groups": [
+            "default"
+          ],
+          "supported_endpoint_types": [
+            "openai"
+          ]
+        },
+        {
+          "model_name": "kling-v2-master",
+          "description": "Kling-v2-master 是快手 Kling AI 推出的高端视频生成模型，支持根据文字描述或输入图像生成短视频，其在时空注意力、镜头稳定性和角色动态建模等方面均有显著提升，能够更精准地还原提示内容。‌",
+          "icon": "Kling.Color",
+          "tags": "文生视频,图生视频",
+          "vendor_id": 25,
+          "quota_type": 1,
+          "model_ratio": 0,
+          "model_price": 1,
+          "owner_by": "",
+          "completion_ratio": 0,
+          "enable_groups": [
+            "default"
+          ],
+          "supported_endpoint_types": [
+            "openai"
+          ]
+        },
+        {
+          "model_name": "deepseek-v3.2",
+          "description": "DeepSeek-V3.2是引入DeepSeek Sparse Attention（一种稀疏注意力机制）的正式版模型，也是DeepSeek推出的首个将思考融入工具使用的模型，同时支持思考模式与非思考模式的工具调用。",
+          "icon": "DeepSeek.Color",
+          "tags": "Reasoning,Tools,Open Weights,128K",
+          "vendor_id": 19,
+          "quota_type": 0,
+          "model_ratio": 1,
+          "model_price": 0,
+          "owner_by": "",
+          "completion_ratio": 1.5,
+          "cache_ratio": 0.2,
+          "create_cache_ratio": 1.25,
+          "enable_groups": [
+            "default"
+          ],
+          "supported_endpoint_types": [
+            "openai"
+          ]
+        },
+        {
+          "model_name": "deepseek-v4-pro",
+          "description": "旗舰级 MoE 大模型，总参1.6T、激活 49B，原生支持百万级超长上下文。依托海量高质量训练数据，具备顶尖数学逻辑、复杂推理、专业代码与长文本深度解析能力，适配高阶科研、复杂办公、深度智能代理等高难度场景。",
+          "vendor_id": 19,
+          "quota_type": 0,
+          "model_ratio": 6,
+          "model_price": 0,
+          "owner_by": "",
+          "completion_ratio": 2,
+          "cache_ratio": 0.2,
+          "enable_groups": [
+            "default"
+          ],
+          "supported_endpoint_types": [
+            "openai"
+          ]
+        },
+        {
+          "model_name": "glm-4.7",
+          "description": "GLM-4.7 is an AI model provided by zhipuai-coding-plan.",
+          "icon": "Zhipu.Color",
+          "tags": "Reasoning,Tools,Open Weights,204.8K",
+          "vendor_id": 10,
+          "quota_type": 0,
+          "model_ratio": 0.135,
+          "model_price": 0,
+          "owner_by": "",
+          "completion_ratio": 4.074074,
+          "cache_ratio": 2.02963,
+          "enable_groups": [
+            "default"
+          ],
+          "supported_endpoint_types": [
+            "openai"
+          ]
+        },
+        {
+          "model_name": "qwen-plus",
+          "description": "Qwen3系列Plus模型，实现思考模式和非思考模式的有效融合，可在对话中切换模式。推理能力显著超过QwQ、通用能力显著超过Qwen2.5-Plus，达到同规模业界SOTA水平。",
+          "icon": "Qwen.Color",
+          "tags": " 文本生成",
+          "vendor_id": 1,
+          "quota_type": 0,
+          "model_ratio": 0.4,
+          "model_price": 0,
+          "owner_by": "",
+          "completion_ratio": 2.5,
+          "cache_ratio": 0.1,
+          "create_cache_ratio": 1.25,
+          "enable_groups": [
+            "default"
+          ],
+          "supported_endpoint_types": [
+            "openai"
+          ]
+        },
+        {
+          "model_name": "kling-v2-6",
+          "description": "Kling-v2-6是一款支持“文生视频”与“图生视频”功能，且具备同步音频生成能力的专业模式视频AI模型。",
+          "icon": "Kling.Color",
+          "tags": "文生视频,图生视频",
+          "vendor_id": 25,
+          "quota_type": 1,
+          "model_ratio": 0,
+          "model_price": 1.2,
+          "owner_by": "",
+          "completion_ratio": 0,
+          "enable_groups": [
+            "default"
+          ],
+          "supported_endpoint_types": [
+            "openai"
+          ]
+        },
+        {
+          "model_name": "kling-v2-5-turbo",
+          "description": "Kling 2.5 Turbo(2025.9):生成速度提升、成本降低;运动帧率更流畅持批量生成,适配工业化生产。",
+          "icon": "Kling.Color",
+          "tags": "文生视频,图生视频",
+          "vendor_id": 25,
+          "quota_type": 1,
+          "model_ratio": 0,
+          "model_price": 0.3,
+          "owner_by": "",
+          "completion_ratio": 0,
+          "enable_groups": [
+            "default"
+          ],
+          "supported_endpoint_types": [
+            "openai"
+          ]
+        },
+        {
+          "model_name": "kling-v2-1-master",
+          "description": "Kling-v2-1-master 是快手 Kling AI 推出的高端视频生成模型，支持根据文字描述或输入图像生成短视频，其在时空注意力、镜头稳定性和角色动态建模等方面均有显著提升，能够更精准地还原提示内容。‌",
+          "icon": "Kling.Color",
+          "tags": "文生视频,图生视频",
+          "vendor_id": 25,
+          "quota_type": 1,
+          "model_ratio": 0,
+          "model_price": 2,
+          "owner_by": "",
+          "completion_ratio": 0,
+          "enable_groups": [
+            "default"
+          ],
+          "supported_endpoint_types": [
+            "openai"
+          ]
+        },
+        {
+          "model_name": "kling-v1-6",
+          "vendor_id": 25,
+          "quota_type": 0,
+          "model_ratio": 37.5,
+          "model_price": 0,
+          "owner_by": "",
+          "completion_ratio": 1,
+          "enable_groups": [
+            "default"
+          ],
+          "supported_endpoint_types": [
+            "openai"
+          ]
+        },
+        {
+          "model_name": "kling-v1-5",
+          "vendor_id": 25,
+          "quota_type": 0,
+          "model_ratio": 37.5,
+          "model_price": 0,
+          "owner_by": "",
+          "completion_ratio": 1,
+          "enable_groups": [
+            "default"
+          ],
+          "supported_endpoint_types": [
+            "openai"
+          ]
+        }
+      ],
+      "group_ratio": {
+        "default": 1,
+        "default-xy": 1,
+        "vip": 1
+      },
+      "pricing_version": "a42d372ccf0b5dd13ecf71203521f9d2",
+      "success": true,
+      "supported_endpoint": {
+        "openai": {
+          "path": "/v1/chat/completions",
+          "method": "POST"
+        }
+      },
+      "usable_group": {
+        "default": "默认分组",
+        "default-xy": "提供deepseekv4及minimax",
+        "vip": "vip"
+      },
+      "vendors": [
+        {
+          "id": 10,
+          "name": "智谱",
+          "icon": "Zhipu.Color"
+        },
+        {
+          "id": 23,
+          "name": "Moonshot",
+          "icon": "Moonshot"
+        },
+        {
+          "id": 45,
+          "name": "Cloudflare",
+          "icon": "Cloudflare.Color"
+        },
+        {
+          "id": 13,
+          "name": "Google",
+          "icon": "Gemini.Color"
+        },
+        {
+          "id": 19,
+          "name": "DeepSeek",
+          "icon": "DeepSeek.Color"
+        },
+        {
+          "id": 20,
+          "name": "零一万物",
+          "icon": "Yi.Color"
+        },
+        {
+          "id": 24,
+          "name": "即梦",
+          "icon": "Jimeng.Color"
+        },
+        {
+          "id": 39,
+          "name": "OpenAI",
+          "icon": "OpenAI"
+        },
+        {
+          "id": 43,
+          "name": "Anthropic",
+          "description": "Anthropic是一家总部位于美国加州旧金山的人工智能（AI）安全和研究公司‌，以其大语言模型产品Claude系列和前沿的AI安全理念而闻名。‌",
+          "icon": "Anthropic.Color"
+        },
+        {
+          "id": 26,
+          "name": "Vidu",
+          "icon": "Vidu"
+        },
+        {
+          "id": 46,
+          "name": "MiniMax",
+          "description": "MiniMax 是一家通用人工智能科技公司，致力于与用户共创智能。MiniMax 自主研发了不同模态的通用大模型，包括万亿参数的 MoE 文本大模型、语音大模型以及图像大模型。基于不同模态通用大模型，推出海螺AI、星野等原生应用。",
+          "icon": "Minimax.Color"
+        },
+        {
+          "id": 48,
+          "name": "快手",
+          "icon": "Kling.Color"
+        },
+        {
+          "id": 1,
+          "name": "阿里巴巴",
+          "icon": "Qwen.Color"
+        },
+        {
+          "id": 34,
+          "name": "Vultr"
+        },
+        {
+          "id": 25,
+          "name": "快手可灵",
+          "icon": "Kling.Color"
+        },
+        {
+          "id": 21,
+          "name": "字节跳动",
+          "description": "字节跳动推出的ai大模型，包括：doubao，seed，seedream，seedance等。全系列大模型。",
+          "icon": "Doubao.Color"
+        }
+      ]
+    }
+  }
+]

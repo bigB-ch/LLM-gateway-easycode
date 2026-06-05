@@ -1,6 +1,7 @@
 import uuid
 import json
 import time
+import random
 import asyncio
 from fastapi import APIRouter, Request, HTTPException
 
@@ -42,7 +43,14 @@ async def chat_completions(request: Request):
     unified = UnifiedRequest(**body)
     request_id = f"req_{uuid.uuid4().hex[:16]}"
 
-    # 4. Find adapter
+    # 4. Check model allowlist
+    auth_allowlist = auth_info.get("model_allowlist", "")
+    if auth_allowlist:
+        allowed = [m.strip() for m in auth_allowlist.split(",") if m.strip()]
+        if allowed and unified.model not in allowed:
+            raise HTTPException(status_code=403, detail={"error": "model_not_allowed"})
+
+    # 5. Find adapter
     adapter = find_adapter(unified.model, _adapters)
     if adapter is None:
         raise HTTPException(status_code=400, detail={"error": "invalid_model"})
@@ -54,6 +62,11 @@ async def chat_completions(request: Request):
     )
     if not await should_attempt(adapter.provider_name, cb_config):
         raise HTTPException(status_code=503, detail={"error": "model_temporarily_unavailable"})
+
+    # 5.5. Balance check
+    user_balance = auth_info.get("balance", 0)
+    if user_balance <= 0:
+        raise HTTPException(status_code=402, detail={"error": "insufficient_balance"})
 
     # 6. Call provider with retries
     t_start = time.time()
@@ -69,7 +82,7 @@ async def chat_completions(request: Request):
             await record_success(adapter.provider_name)
 
             if response.usage:
-                cost, bill_cost = calculate_cost(
+                cost, bill_cost = await calculate_cost(
                     unified.model,
                     response.usage.prompt_tokens,
                     response.usage.completion_tokens,
@@ -101,9 +114,15 @@ async def chat_completions(request: Request):
             last_error = "timeout"
         except Exception as e:
             last_error = str(e)
+            # Don't retry 4xx errors (client errors)
+            if hasattr(e, 'response') and e.response is not None:
+                status = getattr(e.response, 'status_code', 0)
+                if 400 <= status < 500:
+                    break
 
         if attempt < MAX_RETRIES:
-            await asyncio.sleep(RETRY_BACKOFF_BASE * (2 ** attempt))
+            jitter = random.uniform(0.5, 1.5)
+            await asyncio.sleep(RETRY_BACKOFF_BASE * (2 ** attempt) * jitter)
 
     # All retries failed
     latency_ms = int((time.time() - t_start) * 1000)
@@ -147,8 +166,18 @@ async def list_models():
 
 _KNOWN_MODELS = {
     "openai": ["gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4", "gpt-3.5-turbo", "o1", "o3", "o3-mini"],
-    "deepseek": ["deepseek-v4-flash", "deepseek-v4-pro"],
-    "qwen": ["qwen-plus", "qwen-max", "qwen-turbo"],
+    "deepseek": ["deepseek-v3.2", "deepseek-v4-flash", "deepseek-v4-pro"],
+    "qwen": ["qwen-plus", "qwen-max", "qwen-turbo", "qwen3.6-plus"],
     "anthropic": ["claude-sonnet-4-20250514", "claude-3-5-haiku-20241022"],
     "google": ["gemini-2.5-flash", "gemini-2.5-pro"],
+    "zhipu": ["glm-4.7", "glm-5", "glm-5.1"],
+    "moonshot": ["kimi-k2.5", "kimi-k2.6"],
+    "doubao": ["doubao-seedance-2-0-260128", "doubao-seedance-2-0-fast-260128"],
+    "minimax": ["MiniMax-M2.5"],
+    "kling": [
+        "kling-v1", "kling-v1-5", "kling-v1-6",
+        "kling-v2-1", "kling-v2-1-master", "kling-v2-master",
+        "kling-v2-5-turbo", "kling-v2-6",
+        "kling-v3", "kling-v3-omni", "kling-video-o1",
+    ],
 }

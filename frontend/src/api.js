@@ -51,10 +51,23 @@ export const api = {
 
   getTrend: (days = 7) => request(`/reports/trend?days=${days}`),
 
-  getUsage: (page = 1) => request(`/reports/usage?page=${page}`),
+  getUsage: (page = 1, dateFrom, dateTo) => {
+    const params = new URLSearchParams({ page: String(page) })
+    if (dateFrom) params.set('date_from', dateFrom)
+    if (dateTo) params.set('date_to', dateTo)
+    return request(`/reports/usage?${params}`)
+  },
 
-  createKey: (name, rateLimit = 60) =>
-    request('/keys', { method: 'POST', body: JSON.stringify({ name, rate_limit: rateLimit }) }),
+  createKey: (name, rateLimit = 60, opts = {}) =>
+    request('/keys', { method: 'POST', body: JSON.stringify({
+      name, rate_limit: rateLimit,
+      token_group: opts.token_group || null,
+      token_quota: opts.token_quota || null,
+      ip_whitelist: opts.ip_whitelist || null,
+      model_allowlist: opts.model_allowlist || null,
+      expire_days: opts.expire_days || null,
+      count: opts.count || 1,
+    }) }),
 
   listKeys: () => request('/keys'),
 
@@ -66,4 +79,69 @@ export const api = {
 
   changePassword: (oldPassword, newPassword) =>
     request('/auth/password', { method: 'PUT', body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }) }),
+
+  forgotPassword: (email) =>
+    request('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
+
+  resetPassword: (email, code, newPassword) =>
+    request('/auth/reset-password', { method: 'POST', body: JSON.stringify({ email, code, new_password: newPassword }) }),
+
+  // ── Admin ──
+  getAdminDashboard: () => request('/reports/admin-dashboard'),
+
+  listUsers: (cursor, limit = 50) => {
+    const params = new URLSearchParams({ limit: String(limit) })
+    if (cursor) params.set('cursor', cursor)
+    return request(`/users?${params}`)
+  },
+
+  toggleUser: (userId, action) =>
+    request(`/users/${userId}/${action}`, { method: 'POST' }),
+
+  topupUser: (userId, amountYuan) =>
+    request(`/users/${userId}/topup`, { method: 'POST', body: JSON.stringify({ amount_yuan: amountYuan }) }),
+
+  createPlan: (name, tokenQuota, price, durationDays, description) =>
+    request('/plans', { method: 'POST', body: JSON.stringify({ name, token_quota: tokenQuota, price, duration_days: durationDays, description }) }),
+
+  getAllUsage: (page = 1, pageSize = 20) =>
+    request(`/reports/all-usage?page=${page}&page_size=${pageSize}`),
+
+  getAnnouncements: () => request('/system/announcements'),
+
+  getFAQ: () => request('/system/faq'),
+
+  recharge: (amountYuan, method = 'alipay', txnId = null) =>
+    request('/plans/recharge', { method: 'POST', body: JSON.stringify({ amount_yuan: amountYuan, method, txn_id: txnId }) }),
+
+  alipayRecharge: (amountYuan) =>
+    request('/plans/recharge/alipay', { method: 'POST', body: JSON.stringify({ amount_yuan: amountYuan }) }),
+
+  queryAlipayPayment: (outTradeNo) =>
+    request(`/plans/recharge/alipay/query?out_trade_no=${outTradeNo}`, { method: 'POST' }),
+
+  getPaymentConfig: () => request('/system/payment-config'),
+
+  savePaymentConfig: (config) =>
+    request('/system/payment-config', { method: 'PUT', body: JSON.stringify(config) }),
+
+  getPricing: () => request('/system/pricing'),
+
+  savePricing: (data) =>
+    request('/system/pricing', { method: 'PUT', body: JSON.stringify(data) }),
+
+  getPendingPayments: () => request('/plans/payments/pending'),
+
+  verifyPayment: (paymentId, approved) =>
+    request(`/plans/payments/${paymentId}/verify`, { method: 'POST', body: JSON.stringify({ approved }) }),
+
+  redeemCode: (code) =>
+    request('/plans/redeem', { method: 'POST', body: JSON.stringify({ code }) }),
+
+  getRechargeHistory: () => request('/plans/recharge-history'),
+
+  getSettings: () => request('/users/me/settings'),
+
+  saveSettings: (settings) =>
+    request('/users/me/settings', { method: 'PUT', body: JSON.stringify({ settings }) }),
 }

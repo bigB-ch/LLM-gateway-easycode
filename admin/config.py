@@ -15,7 +15,9 @@ DATABASE_URL = os.getenv(
     "postgresql+asyncpg://gateway:gateway@postgres:5432/llm_gateway",
 )
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379")
-JWT_SECRET = os.getenv("JWT_SECRET", "dev-secret")
+JWT_SECRET = os.getenv("JWT_SECRET")
+if not JWT_SECRET:
+    raise RuntimeError("JWT_SECRET environment variable is required. Generate one with: openssl rand -hex 32")
 JWT_ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 15
 REFRESH_TOKEN_EXPIRE_DAYS = 7

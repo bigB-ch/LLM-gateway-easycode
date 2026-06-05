@@ -1,4 +1,5 @@
 import time
+import random
 from enum import Enum
 from redis_client import redis
 
@@ -27,8 +28,19 @@ async def should_attempt(provider: str, config: dict) -> bool:
         return True
     if state["status"] == CBState.OPEN:
         elapsed = time.time() - state["last_failure_time"]
-        if elapsed > config["half_open_ttl"]:
-            await redis.hset(f"cb:{provider}", "status", CBState.HALF_OPEN)
+        if elapsed > config.get("half_open_ttl", 30):
+            # Single probe: set half_open + probe flag
+            await redis.hset(f"cb:{provider}", mapping={
+                "status": CBState.HALF_OPEN,
+                "probe_count": "1",
+            })
+            return True
+        return False
+    # HALF_OPEN: only allow if probe count hasn't been exceeded
+    if state["status"] == CBState.HALF_OPEN:
+        count = await redis.hget(f"cb:{provider}", "probe_count")
+        if count and int(count) > 0:
+            await redis.hincrby(f"cb:{provider}", "probe_count", -1)
             return True
         return False
     return True
@@ -39,6 +51,7 @@ async def record_success(provider: str):
         "status": CBState.CLOSED,
         "failure_count": "0",
         "last_failure_time": "0",
+        "probe_count": "0",
     })
 
 
@@ -47,7 +60,7 @@ async def record_failure(provider: str, config: dict):
     current = await redis.hget(key, "failure_count")
     count = int(current or 0) + 1
 
-    if count >= config["failure_threshold"]:
+    if count >= config.get("failure_threshold", 3):
         await redis.hset(key, mapping={
             "status": CBState.OPEN,
             "failure_count": str(count),
@@ -59,3 +72,5 @@ async def record_failure(provider: str, config: dict):
             "failure_count": str(count),
             "last_failure_time": str(time.time()),
         })
+    # Auto-expire CB state after 1 hour
+    await redis.expire(key, 3600)

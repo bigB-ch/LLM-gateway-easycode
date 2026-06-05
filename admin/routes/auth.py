@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -82,14 +82,26 @@ async def verify_code(req: VerifyCodeRequest, db: AsyncSession = Depends(get_db)
 
 
 @router.post("/login")
-async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(req: LoginRequest, request: Request, db: AsyncSession = Depends(get_db)):
+    r = redis_client.redis
+    client_ip = request.client.host if request.client else "unknown"
+    rate_key = f"login_rate:{client_ip}"
+    attempts = await r.get(rate_key)
+    if attempts and int(attempts) >= 10:
+        raise HTTPException(status_code=429, detail={"error": "too_many_login_attempts"})
+
     from services.auth_service import authenticate_user_by_username
     if "@" in req.login:
         user = await authenticate_user(db, req.login, req.password)
     else:
         user = await authenticate_user_by_username(db, req.login, req.password)
     if user is None:
+        await r.incr(rate_key)
+        await r.expire(rate_key, 900)
         raise HTTPException(status_code=401, detail={"error": "invalid_credentials"})
+    from datetime import datetime, timezone
+    user.last_login_at = datetime.now(timezone.utc)
+    await db.commit()
     access_token = create_access_token(str(user.id), user.role)
     refresh_token = create_refresh_token(str(user.id))
     return TokenResponse(
@@ -127,12 +139,71 @@ async def me(user: dict = Depends(get_current_user), db: AsyncSession = Depends(
     u = result.scalar_one_or_none()
     if u is None:
         raise HTTPException(status_code=404)
-    return {"id": str(u.id), "username": u.username, "email": u.email, "role": u.role, "balance": u.balance}
+    return {
+        "id": str(u.id),
+        "username": u.username,
+        "email": u.email,
+        "role": u.role,
+        "balance": u.balance,
+        "created_at": u.created_at.isoformat(),
+        "last_login_at": u.last_login_at.isoformat() if u.last_login_at else None,
+    }
 
 
 class ChangePasswordRequest(BaseModel):
     old_password: str
     new_password: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    code: str
+    new_password: str
+
+
+@router.post("/forgot-password")
+async def forgot_password(req: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+    """Send a password reset verification code to the registered email."""
+    user = await get_user_by_email(db, req.email)
+    if user is None:
+        raise HTTPException(status_code=404, detail={"error": "email_not_found"})
+    if user.status != "active":
+        raise HTTPException(status_code=403, detail={"error": "account_not_active"})
+    r = redis_client.redis
+    ok = await send_verification_code(r, req.email)
+    if not ok:
+        raise HTTPException(status_code=429, detail={"error": "too_many_codes"})
+    return {"message": "reset_code_sent", "email": req.email}
+
+
+@router.post("/reset-password")
+async def reset_password(req: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    """Reset password using email, verification code, and new password."""
+    user = await get_user_by_email(db, req.email)
+    if user is None:
+        raise HTTPException(status_code=404, detail={"error": "email_not_found"})
+
+    r = redis_client.redis
+    code_key = f"verification_code:{req.email}"
+    stored = await r.get(code_key)
+    if stored is None or stored != req.code:
+        raise HTTPException(status_code=400, detail={"error": "invalid_or_expired_code"})
+
+    from services.auth_service import validate_password
+    pw_error = validate_password(req.new_password)
+    if pw_error:
+        raise HTTPException(status_code=422, detail={"error": pw_error})
+
+    from crypto import hash_password
+    user.password_hash = hash_password(req.new_password)
+    await db.commit()
+
+    await r.delete(code_key)
+    return {"message": "password_reset_success"}
 
 
 @router.put("/password")

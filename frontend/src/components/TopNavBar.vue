@@ -42,8 +42,8 @@
       <!-- Notification panel -->
       <div v-if="showNoti" class="noti-panel" @click.stop>
         <div class="noti-header">
-          系统通知
-          <button v-if="notifications.length" class="noti-clear" @click="clearAllNoti">全部已读</button>
+          {{ t('notifications') }}
+          <button v-if="notifications.length" class="noti-clear" @click="clearAllNoti">{{ t('markAllRead') }}</button>
         </div>
         <div v-if="notifications.length" class="noti-list">
           <div v-for="n in notifications" :key="n.id" class="noti-item" @click="dismissNoti(n.id)">
@@ -51,7 +51,7 @@
             <div class="noti-time">{{ n.time }}</div>
           </div>
         </div>
-        <div v-else class="noti-empty">暂无通知</div>
+        <div v-else class="noti-empty">{{ t('noNotifications') }}</div>
       </div>
     </div>
   </header>

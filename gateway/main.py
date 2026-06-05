@@ -26,14 +26,21 @@ async def lifespan(app: FastAPI):
             }
     adapters = create_adapters(supplier_configs)
     set_adapters(adapters)
+
+    # Load pricing from Redis
+    from pricing import reload_pricing
+    await reload_pricing()
+
     yield
 
 
 app = FastAPI(title="LLM Gateway", lifespan=lifespan)
 
+_cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -49,3 +56,4 @@ app.include_router(admin_router)
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+#

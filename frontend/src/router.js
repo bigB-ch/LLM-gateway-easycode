@@ -22,6 +22,9 @@ import Suppliers from './pages/Suppliers.vue'
 import Breakers from './pages/Breakers.vue'
 import Users from './pages/Users.vue'
 import PlanManager from './pages/PlanManager.vue'
+import AdminUsage from './pages/AdminUsage.vue'
+import Payments from './pages/Payments.vue'
+import Pricing from './pages/Pricing.vue'
 
 const routes = [
   // Public
@@ -55,6 +58,9 @@ const routes = [
       { path: 'breakers', component: Breakers },
       { path: 'users', component: Users },
       { path: 'plans', component: PlanManager },
+      { path: 'usage', component: AdminUsage },
+      { path: 'payments', component: Payments },
+      { path: 'pricing', component: Pricing },
     ],
   },
 

@@ -46,6 +46,8 @@ export const gatewayApi = {
 
   listModels: () => fetch('/v1/models').then(r => r.json()),
 
+  listModelCatalog: () => request('/gateway/admin/models'),
+
   chat: (model, messages, temperature, maxTokens) =>
     request('/gateway/admin/chat', {
       method: 'POST',

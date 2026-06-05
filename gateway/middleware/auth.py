@@ -34,7 +34,19 @@ async def verify_api_key(request: Request) -> dict:
     if not data or data.get("status") != "active":
         raise HTTPException(status_code=401, detail={"error": "invalid_api_key"})
 
+    # Check cached balance from Redis
+    user_id = data["user_id"]
+    balance = 0
+    try:
+        bal_str = await redis.get(f"user_balance:{user_id}")
+        if bal_str is not None:
+            balance = int(bal_str)
+    except Exception:
+        pass
+
     return {
-        "user_id": data["user_id"],
+        "user_id": user_id,
         "rate_limit": int(data.get("rate_limit", 60)),
+        "balance": balance,
+        "model_allowlist": data.get("model_allowlist", ""),
     }

@@ -14,6 +14,7 @@ from routes.keys import router as keys_router
 from routes.users import router as users_router
 from routes.reports import router as reports_router
 from routes.plans import router as plans_router
+from routes.system import router as system_router
 from consumer import run_consumer
 
 
@@ -44,9 +45,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="LLM Gateway Admin", lifespan=lifespan)
 
+_cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -57,6 +59,7 @@ app.include_router(keys_router)
 app.include_router(users_router)
 app.include_router(reports_router)
 app.include_router(plans_router)
+app.include_router(system_router)
 
 
 @app.get("/admin/api/health")

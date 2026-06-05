@@ -7,8 +7,9 @@ from pydantic import BaseModel
 from admin_auth import require_admin, get_current_user
 from redis_client import redis
 from adapters import create_adapters, find_adapter, BaseAdapter
-from routes import set_adapters, get_adapters
+from routes import set_adapters, get_adapters, _KNOWN_MODELS
 from circuit_breaker import get_cb_state, record_success
+from pricing import PRICING, MARKUP
 
 router = APIRouter(prefix="/gateway/admin")
 
@@ -127,6 +128,56 @@ async def check_balance(provider: str, _admin: dict = Depends(require_admin)):
         return {"provider": provider, "balance": None, "error": "timeout"}
     except Exception as e:
         return {"provider": provider, "balance": None, "error": str(e)}
+
+
+# ── Model Catalog ──
+
+_MODEL_META = {
+    "deepseek-v3.2": {"tags": "Reasoning,Tools,Open Weights,128K", "desc": "DeepSeek-V3.2 introduces DeepSeek Sparse Attention, first model to integrate thinking into tool use."},
+    "deepseek-v4-flash": {"tags": "Open Weights", "desc": "Efficient lightweight MoE model, 284B total/13B active params, native 1M+ context. Fast inference, low cost."},
+    "deepseek-v4-pro": {"tags": "Open Weights", "desc": "Flagship MoE model, 1.6T total/49B active params, native 1M+ context. Top math, coding, reasoning."},
+    "qwen-plus": {"tags": "text", "desc": "Qwen3 Plus model, merges thinking and non-thinking modes, reasoning surpasses QwQ."},
+    "qwen3.6-plus": {"tags": "thinking,vision,text", "desc": "Qwen3.6 native vision-language Plus model, strong in agentic coding, OCR, multimodal recognition."},
+    "glm-4.7": {"tags": "Reasoning,Tools,Open Weights,204.8K", "desc": "GLM-4.7 by Zhipu AI, supports reasoning and tool calling, 204.8K context."},
+    "glm-5": {"tags": "Reasoning,Tools,Open Weights,204.8K", "desc": "GLM-5 next-gen model by Zhipu AI, enhanced reasoning and tool calling."},
+    "glm-5.1": {"tags": "text,reasoning", "desc": "Zhipu latest model, coding ability close to Sonnet 4.6. Supports text generation and deep reasoning."},
+    "kimi-k2.5": {"tags": "Reasoning,Tools,Files,Open Weights,Vision,262.1K", "desc": "Kimi-K2.5 supports reasoning, tool calling, file processing, vision, 262K context."},
+    "kimi-k2.6": {"tags": "Reasoning,Tools,Files,Vision", "desc": "Kimi K2.6 - most intelligent model, top scores in HLE, SWE-Bench Pro, DeepSearchQA."},
+    "MiniMax-M2.5": {"tags": "Tools,Open Weights,194K", "desc": "MiniMax-M2.5 flagship open-source model, SOTA in coding, tool calling and office scenarios."},
+    "doubao-seedance-2-0-260128": {"tags": "video", "desc": "ByteDance Seedance 2.0 professional multi-modal video model, supports image/video/audio input."},
+    "doubao-seedance-2-0-fast-260128": {"tags": "video", "desc": "Seedance 2.0 fast variant, inherits core features with faster generation speed."},
+    "kling-v1": {"tags": "video", "desc": "Kuaishou Kling video generation model v1."},
+    "kling-v2-1": {"tags": "text2video,img2video", "desc": "Kling v2.1 supports text-to-video and image-to-video generation."},
+    "kling-v2-1-master": {"tags": "text2video,img2video", "desc": "Kling v2.1 master high-end video model with improved spatio-temporal attention and character dynamics."},
+    "kling-v2-master": {"tags": "text2video,img2video", "desc": "Kling v2 master high-end video model from Kuaishou Kling AI."},
+    "kling-v2-5-turbo": {"tags": "text2video,img2video", "desc": "Kling 2.5 Turbo: faster generation, lower cost, smoother motion."},
+    "kling-v2-6": {"tags": "text2video,img2video", "desc": "Kling v2.6 supports text/image-to-video with synchronized audio generation."},
+    "kling-v3": {"tags": "text2video,img2video", "desc": "Kling 3.0 AI professional video production system, supports native 2K/4K output, Canvas Agent."},
+    "kling-v3-omni": {"tags": "text2video,img2video", "desc": "Kling 3.0 Omni multimodal video generation model."},
+}
+
+@router.get("/models")
+async def list_models_catalog(_user: dict = Depends(get_current_user)):
+    """Return models with user-facing prices (already includes markup)."""
+    from pricing import reload_pricing, PRICING, MARKUP
+    await reload_pricing()
+    _pricing, _markup = PRICING, MARKUP
+    models = []
+    for provider, model_list in _KNOWN_MODELS.items():
+        for model in model_list:
+            pricing = _pricing.get(model, {"prompt": 10, "completion": 10})
+            meta = _MODEL_META.get(model, {})
+            models.append({
+                "model": model,
+                "provider": provider,
+                "input_price": round(pricing["prompt"] * _markup, 4),
+                "output_price": round(pricing["completion"] * _markup, 4),
+                "cache_price": round(pricing.get("cache", 0) * _markup, 4),
+                "per_use": round(pricing.get("per_use", 0) * _markup, 4),
+                "tags": meta.get("tags", ""),
+                "description": meta.get("desc", ""),
+            })
+    return {"object": "list", "data": models}
 
 
 # ── Circuit Breaker Management ──

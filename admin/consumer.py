@@ -60,6 +60,62 @@ async def batch_insert(messages: list[tuple[str, dict]]) -> list[str]:
     async with engine.begin() as conn:
         await conn.execute(text(sql), params)
 
+        # Deduct from user plans first, then balance
+        for i, (msg_id, data) in enumerate(messages):
+            if data.get("status") != "success":
+                continue
+            user_id = data.get("user_id", "")
+            bill_cost = int(data.get("bill_cost", 0))
+            if not user_id or bill_cost <= 0:
+                continue
+
+            # Lock user row for atomic deduction
+            user_result = await conn.execute(
+                text("SELECT id, balance FROM users WHERE id = :uid FOR UPDATE"),
+                {"uid": user_id},
+            )
+            user_row = user_result.fetchone()
+            if not user_row:
+                continue
+            user_balance = user_row[1]
+            remaining = bill_cost
+
+            # Try deducting from active plans first
+            plan_result = await conn.execute(
+                text(
+                    "SELECT id, token_remaining FROM user_plans "
+                    "WHERE user_id = :uid AND token_remaining > 0 AND expires_at > NOW() "
+                    "ORDER BY expires_at ASC FOR UPDATE"
+                ),
+                {"uid": user_id},
+            )
+            for plan_row in plan_result:
+                if remaining <= 0:
+                    break
+                plan_id, plan_tokens = plan_row[0], plan_row[1]
+                deduct = min(remaining, plan_tokens)
+                await conn.execute(
+                    text("UPDATE user_plans SET token_remaining = token_remaining - :d WHERE id = :pid"),
+                    {"d": deduct, "pid": plan_id},
+                )
+                remaining -= deduct
+
+            # Deduct remainder from balance
+            if remaining > 0:
+                if user_balance < remaining:
+                    remaining = user_balance  # Can't go negative
+                await conn.execute(
+                    text("UPDATE users SET balance = balance - :d WHERE id = :uid"),
+                    {"d": remaining, "uid": user_id},
+                )
+                # Sync balance cache to Redis
+                try:
+                    new_balance = user_balance - remaining
+                    r = redis_client.redis
+                    await r.set(f"user_balance:{user_id}", str(new_balance), ex=3600)
+                except Exception:
+                    pass
+
     return msg_ids
 
 

@@ -10,6 +10,11 @@ from dependencies import get_current_user, require_admin
 router = APIRouter(prefix="/admin/api/users", tags=["users"])
 
 
+class TopupRequest(BaseModel):
+    amount_yuan: float
+    note: str | None = None
+
+
 class UserResponse(BaseModel):
     id: str
     username: str
@@ -27,6 +32,7 @@ def _user_to_response(u: User) -> dict:
         "email": u.email,
         "role": u.role,
         "balance": u.balance,
+        "balance_yuan": round(u.balance / 100, 2),
         "status": u.status,
         "created_at": u.created_at.isoformat(),
     }
@@ -94,3 +100,56 @@ async def activate_user(
     u.status = "active"
     await db.commit()
     return {"message": "user_activated"}
+
+
+@router.post("/{user_id}/topup")
+async def topup_user(
+    user_id: str,
+    req: TopupRequest,
+    db: AsyncSession = Depends(get_db),
+    _admin: dict = Depends(require_admin),
+):
+    result = await db.execute(select(User).where(User.id == user_id))
+    u = result.scalar_one_or_none()
+    if u is None:
+        raise HTTPException(status_code=404, detail={"error": "user_not_found"})
+    amount_fen = int(req.amount_yuan * 100)
+    u.balance += amount_fen
+    await db.commit()
+    return {
+        "message": "topup_success",
+        "user_id": str(u.id),
+        "amount_yuan": req.amount_yuan,
+        "balance_yuan": round(u.balance / 100, 2),
+    }
+
+
+class UpdateSettingsRequest(BaseModel):
+    settings: dict
+
+
+@router.get("/me/settings")
+async def get_my_settings(
+    user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(User).where(User.id == user["user_id"]))
+    u = result.scalar_one_or_none()
+    if u is None:
+        raise HTTPException(status_code=404)
+    return {"settings": u.settings or {}}
+
+
+@router.put("/me/settings")
+async def update_my_settings(
+    req: UpdateSettingsRequest,
+    user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(User).where(User.id == user["user_id"]))
+    u = result.scalar_one_or_none()
+    if u is None:
+        raise HTTPException(status_code=404)
+    u.settings = req.settings
+    await db.commit()
+    return {"message": "settings_updated", "settings": u.settings}

@@ -7,7 +7,7 @@
         <div style="min-width:200px">
           <label class="form-label">模型</label>
           <select v-model="selectedModel" class="form-select">
-            <option value="">-- 选择模型 --</option>
+            <option value="">{{ t('selectModel') }}</option>
             <option v-for="m in models" :key="m.id" :value="m.id">{{ m.id }}</option>
           </select>
         </div>
@@ -19,15 +19,15 @@
           <label class="form-label">Max Tokens</label>
           <input v-model.number="maxTokens" type="number" class="form-input" placeholder="默认" min="1" style="width:110px" />
         </div>
-        <button class="btn btn-outline" @click="clearChat">清空</button>
+        <button class="btn btn-outline" @click="clearChat">{{ t('clear') }}</button>
       </div>
     </div>
 
     <div ref="chatArea" class="card card-padded" style="flex:1;overflow-y:auto;margin-bottom:12px">
       <div v-if="messages.length === 0" class="empty-state" style="padding-top:60px">
         <div class="empty-state-icon">&#x1F4AC;</div>
-        <div class="empty-state-text">选择模型后输入消息开始测试</div>
-        <div class="empty-state-sub">模型列表从已配置的供应商中获取</div>
+        <div class="empty-state-text">{{ t('playgroundHint') }}</div>
+        <div class="empty-state-sub">{{ t('modelListHint') }}</div>
       </div>
       <div v-for="(msg, i) in messages" :key="i" :style="{display:'flex',justifyContent:msg.role==='user'?'flex-end':'flex-start',marginBottom:'16px'}">
         <div :class="'chat-bubble ' + msg.role">
@@ -42,7 +42,7 @@
         </div>
       </div>
       <div v-if="loading" style="margin-bottom:16px">
-        <div class="chat-bubble assistant" style="color:var(--text-muted)">思考中...</div>
+        <div class="chat-bubble assistant" style="color:var(--text-muted)">{{ t('thinking') }}</div>
       </div>
     </div>
 
@@ -50,12 +50,12 @@
 
     <div style="display:flex;gap:10px">
       <textarea v-model="inputMessage" @keydown.enter.exact.prevent="sendMessage"
-        placeholder="输入消息，Enter 发送" :disabled="loading || !selectedModel"
+        :placeholder="t('inputMsgHint')" :disabled="loading || !selectedModel"
         rows="3" class="form-textarea" style="flex:1"></textarea>
       <button class="btn btn-primary" @click="sendMessage"
         :disabled="loading || !selectedModel || !inputMessage.trim()"
         style="padding:12px 28px;font-size:14px;align-self:flex-end">
-        {{ loading ? '发送中...' : '发送' }}
+        {{ loading ? t('sending') : t('send') }}
       </button>
     </div>
   </div>
@@ -64,6 +64,8 @@
 <script setup>
 import { ref, onMounted, nextTick } from 'vue'
 import { gatewayApi } from '../gatewayApi'
+import { useI18n } from '../i18n'
+const { t } = useI18n()
 
 const models = ref([])
 const selectedModel = ref('')

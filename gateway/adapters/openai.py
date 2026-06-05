@@ -50,11 +50,14 @@ class OpenAIAdapter(BaseAdapter):
         )
 
     async def get_balance(self) -> dict | None:
-        """Query OpenAI billing: returns today's cost as a proxy (no direct balance API)."""
         try:
             from datetime import datetime, timezone
-            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            from adapters.balance_utils import try_balance_endpoints
             client = await self.get_client()
+            result = await try_balance_endpoints(client, self.api_key, self.base_url)
+            if result:
+                return result
+            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
             resp = await client.get(
                 f"{self.base_url}/organization/costs?start_date={today}&end_date={today}",
                 headers={"Authorization": f"Bearer {self.api_key}"},
@@ -73,10 +76,17 @@ class OpenAIAdapter(BaseAdapter):
     async def health_check(self) -> bool:
         try:
             client = await self.get_client()
-            resp = await client.get(
-                f"{self.base_url}/models",
-                headers={"Authorization": f"Bearer {self.api_key}"},
-            )
-            return resp.status_code == 200
+            # Try /v1/models first (OpenAI standard), then /models
+            for path in ("/v1/models", "/models"):
+                try:
+                    resp = await client.get(
+                        f"{self.base_url}{path}",
+                        headers={"Authorization": f"Bearer {self.api_key}"},
+                    )
+                    if resp.status_code == 200:
+                        return True
+                except Exception:
+                    continue
+            return False
         except Exception:
             return False

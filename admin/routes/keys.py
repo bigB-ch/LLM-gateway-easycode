@@ -18,17 +18,12 @@ router = APIRouter(prefix="/admin/api/keys", tags=["keys"])
 class CreateKeyRequest(BaseModel):
     name: str | None = None
     rate_limit: int = 60
-
-
-class KeyResponse(BaseModel):
-    id: str
-    key_prefix: str
-    name: str | None
-    rate_limit: int
-    status: str
-    last_used_at: str | None
-    expires_at: str | None
-    created_at: str
+    token_group: str | None = None
+    token_quota: int | None = None
+    ip_whitelist: str | None = None
+    model_allowlist: str | None = None
+    expire_days: int | None = None
+    count: int = 1
 
 
 def _key_to_response(key: ApiKey) -> dict:
@@ -37,6 +32,10 @@ def _key_to_response(key: ApiKey) -> dict:
         "key_prefix": key.key_prefix,
         "name": key.name,
         "rate_limit": key.rate_limit,
+        "token_group": key.token_group or "default",
+        "token_quota": key.token_quota,
+        "ip_whitelist": key.ip_whitelist,
+        "models": key.model_allowlist or "",
         "status": key.status,
         "last_used_at": key.last_used_at.isoformat() if key.last_used_at else None,
         "expires_at": key.expires_at.isoformat() if key.expires_at else None,
@@ -61,37 +60,50 @@ async def create_key(req: CreateKeyRequest, user: dict = Depends(get_current_use
     if active_count.scalar() >= 5:
         raise HTTPException(status_code=400, detail={"error": "max_active_keys"})
 
-    raw_key, prefix, hashed = generate_api_key()
-    expires_at = datetime.now(timezone.utc) + timedelta(days=90)
+    expire_days = req.expire_days or 90
+    expires_at = datetime.now(timezone.utc) + timedelta(days=expire_days) if expire_days > 0 else None
 
-    api_key = ApiKey(
-        id=uuid.uuid4(),
-        user_id=user["user_id"],
-        key_hash=hashed,
-        key_prefix=prefix,
-        name=req.name,
-        rate_limit=req.rate_limit,
-        expires_at=expires_at,
-    )
-    db.add(api_key)
+    created_keys = []
+    for _ in range(min(req.count, 10)):
+        raw_key, prefix, hashed = generate_api_key()
 
-    await r.hset(f"apikey:{hashed}", mapping={
-        "user_id": user["user_id"],
-        "rate_limit": str(req.rate_limit),
-        "status": "active",
-    })
+        api_key = ApiKey(
+            id=uuid.uuid4(),
+            user_id=user["user_id"],
+            key_hash=hashed,
+            key_prefix=prefix,
+            name=req.name,
+            rate_limit=req.rate_limit,
+            token_group=req.token_group or "default",
+            token_quota=req.token_quota if req.token_quota and req.token_quota > 0 else None,
+            ip_whitelist=req.ip_whitelist or None,
+            model_allowlist=req.model_allowlist or None,
+            expires_at=expires_at,
+        )
+        db.add(api_key)
 
-    audit = AuditLog(
-        user_id=user["user_id"],
-        action="key.create",
-        resource=prefix,
-        detail={"key_id": str(api_key.id)},
-        ip=request.client.host if request else None,
-    )
-    db.add(audit)
+        await r.hset(f"apikey:{hashed}", mapping={
+            "user_id": user["user_id"],
+            "rate_limit": str(req.rate_limit),
+            "status": "active",
+            "model_allowlist": req.model_allowlist or "",
+        })
+
+        audit = AuditLog(
+            user_id=user["user_id"],
+            action="key.create",
+            resource=prefix,
+            detail={"key_id": str(api_key.id)},
+            ip=request.client.host if request else None,
+        )
+        db.add(audit)
+        created_keys.append({"api_key": raw_key, "key_prefix": prefix})
+
     await db.commit()
 
-    return {"api_key": raw_key, "key_prefix": prefix, "message": "store_key_now"}
+    if len(created_keys) == 1:
+        return {"api_key": created_keys[0]["api_key"], "key_prefix": created_keys[0]["key_prefix"], "message": "store_key_now"}
+    return {"keys": created_keys, "message": f"created_{len(created_keys)}_keys"}
 
 
 @router.get("")
