@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import String, BigInteger, DateTime
+from sqlalchemy import String, BigInteger, DateTime, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from database import Base
@@ -26,3 +26,8 @@ class User(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False)
 
     api_keys = relationship("ApiKey", back_populates="user")
+
+    __table_args__ = (
+        Index("idx_users_status", "status"),
+        Index("idx_users_created_at", "created_at"),
+    )

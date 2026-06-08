@@ -109,6 +109,17 @@ export const api = {
 
   getAnnouncements: () => request('/system/announcements'),
 
+  listAnnouncements: () => request('/system/admin/announcements'),
+
+  createAnnouncement: (content) =>
+    request('/system/admin/announcements', { method: 'POST', body: JSON.stringify({ content }) }),
+
+  updateAnnouncement: (id, content) =>
+    request(`/system/admin/announcements/${id}`, { method: 'PUT', body: JSON.stringify({ content }) }),
+
+  deleteAnnouncement: (id) =>
+    request(`/system/admin/announcements/${id}`, { method: 'DELETE' }),
+
   getFAQ: () => request('/system/faq'),
 
   recharge: (amountYuan, method = 'alipay', txnId = null) =>

@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import String, BigInteger, DateTime, ForeignKey
+from sqlalchemy import String, BigInteger, DateTime, ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.dialects.postgresql import UUID
 from database import Base
@@ -19,3 +19,8 @@ class RechargeRecord(Base):
     method: Mapped[str] = mapped_column(String(32), nullable=False)
     status: Mapped[str] = mapped_column(String(16), default="pending", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+    __table_args__ = (
+        Index("idx_recharge_user_id", "user_id"),
+        Index("idx_recharge_status", "status"),
+    )

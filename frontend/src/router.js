@@ -25,6 +25,7 @@ import PlanManager from './pages/PlanManager.vue'
 import AdminUsage from './pages/AdminUsage.vue'
 import Payments from './pages/Payments.vue'
 import Pricing from './pages/Pricing.vue'
+import Announcements from './pages/Announcements.vue'
 
 const routes = [
   // Public
@@ -61,6 +62,7 @@ const routes = [
       { path: 'usage', component: AdminUsage },
       { path: 'payments', component: Payments },
       { path: 'pricing', component: Pricing },
+      { path: 'announcements', component: Announcements },
     ],
   },
 

@@ -16,6 +16,7 @@
           <router-link to="/admin/usage"><span class="nav-icon">&#x1F4CA;</span> {{ t('adminUsage') }}</router-link>
           <router-link to="/admin/payments"><span class="nav-icon">&#x1F4B3;</span> 支付审核</router-link>
           <router-link to="/admin/pricing"><span class="nav-icon">&#x1F4C8;</span> 价格管理</router-link>
+          <router-link to="/admin/announcements"><span class="nav-icon">&#x1F4E2;</span> 公告管理</router-link>
         </nav>
       </aside>
       <main class="page-main">

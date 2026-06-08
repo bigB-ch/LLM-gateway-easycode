@@ -28,6 +28,7 @@ async def register_user(db: AsyncSession, username: str, email: str, password: s
         username=username,
         email=email,
         password_hash=password_hash,
+        status="inactive",
     )
     db.add(user)
     await db.commit()
@@ -71,9 +72,12 @@ async def verify_code_and_activate(redis, db: AsyncSession, email: str, code: st
 
     await redis.delete(code_key)
     user = await get_user_by_email(db, email)
-    if user and user.status == "active":
-        return user
-    return None
+    if user is None:
+        return None
+    if user.status != "active":
+        user.status = "active"
+        await db.commit()
+    return user
 
 
 async def authenticate_user(db: AsyncSession, email: str, password: str) -> User | None:

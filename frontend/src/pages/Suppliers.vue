@@ -2,7 +2,7 @@
   <div>
     <div class="flex-between mb-24">
       <h1 class="page-title">{{ t('supplierManagement') }}</h1>
-      <button class="btn btn-primary" @click="showForm = !showForm">{{ showForm ? t('cancel') : t('addSupplier') }}</button>
+      <button class="btn btn-primary" @click="toggleForm">{{ showForm ? t('cancel') : t('addSupplier') }}</button>
     </div>
 
     <div v-if="showForm" class="card card-padded mb-24">
@@ -87,6 +87,9 @@ const { t } = useI18n()
 const suppliers = ref([])
 const healthResults = ref({})
 const balanceLoading = ref({})
+function resetForm() { formProvider.value = ''; formApiKey.value = ''; formBaseUrl.value = ''; formBalance.value = 0 }
+function toggleForm() { showForm.value = !showForm.value; if (showForm.value) resetForm() }
+
 const showForm = ref(false)
 const formProvider = ref('')
 const formApiKey = ref('')

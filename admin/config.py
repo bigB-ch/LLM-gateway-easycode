@@ -10,11 +10,12 @@ else:
     # Docker 模式：尝试加载 .env，不存在就用默认值
     load_dotenv()
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql+asyncpg://gateway:gateway@postgres:5432/llm_gateway",
-)
-REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379")
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL environment variable is required. Set it to postgresql+asyncpg://user:password@host:5432/dbname")
+REDIS_URL = os.getenv("REDIS_URL")
+if not REDIS_URL:
+    raise RuntimeError("REDIS_URL environment variable is required. Set it to redis://host:6379")
 JWT_SECRET = os.getenv("JWT_SECRET")
 if not JWT_SECRET:
     raise RuntimeError("JWT_SECRET environment variable is required. Generate one with: openssl rand -hex 32")

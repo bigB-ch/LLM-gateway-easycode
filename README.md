@@ -44,7 +44,7 @@ cd frontend && npm run dev
 - 管理后台: http://localhost:5173/admin
 - Gateway API: http://localhost:8000
 - Admin API: http://localhost:8001
-- 默认管理员: admin@example.com / admin123
+- 默认管理员: admin@example.com / Admin123
 
 ## 配置 OpenAI API Key
 

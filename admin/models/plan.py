@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import String, BigInteger, Integer, DateTime, ForeignKey, Text
+from sqlalchemy import String, BigInteger, Integer, DateTime, ForeignKey, Text, Index
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.dialects.postgresql import UUID
 from database import Base
@@ -32,3 +32,8 @@ class UserPlan(Base):
     token_remaining: Mapped[int] = mapped_column(BigInteger, nullable=False)
     purchased_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    __table_args__ = (
+        Index("idx_user_plans_user_id", "user_id"),
+        Index("idx_user_plans_expires", "expires_at"),
+    )

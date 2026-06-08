@@ -82,26 +82,47 @@ const isConsole = computed(() => {
   return p === '/' || p.startsWith('/keys') || p.startsWith('/usage') || p.startsWith('/plans') || p.startsWith('/settings')
 })
 
-const notifications = ref([
-  { id: 1, title: 'DeepSeek V4 系列模型已上线，欢迎使用', time: '2026-06-03 10:30' },
-])
+const notifications = ref([])
+
+const ANNOUNCEMENTS_KEY = 'read_announcements'
+
+function getReadIds() {
+  try { return JSON.parse(localStorage.getItem(ANNOUNCEMENTS_KEY) || '[]') } catch { return [] }
+}
+function saveReadId(id) {
+  const ids = getReadIds()
+  if (!ids.includes(id)) { ids.push(id); localStorage.setItem(ANNOUNCEMENTS_KEY, JSON.stringify(ids)) }
+}
 
 onMounted(async () => {
   try {
     const user = await api.getMe()
     userName.value = user.username || user.email
   } catch (e) { /* */ }
+  await loadAnnouncements()
   document.addEventListener('click', closeMenu)
 })
 
 onUnmounted(() => document.removeEventListener('click', closeMenu))
 
+async function loadAnnouncements() {
+  try {
+    const res = await api.getAnnouncements()
+    const readIds = getReadIds()
+    const items = (res.items || []).map(a => ({ ...a, title: a.content, read: readIds.includes(a.id) }))
+    notifications.value = items
+    notiCount.value = items.filter(a => !a.read).length
+  } catch (e) { /* keep old notifications on error */ }
+}
+
 function closeMenu() { menuOpen.value = false; showNoti.value = false }
 function dismissNoti(id) {
+  saveReadId(id)
   notifications.value = notifications.value.filter(n => n.id !== id)
-  notiCount.value = notifications.value.length
+  notiCount.value = Math.max(0, notiCount.value - 1)
 }
 function clearAllNoti() {
+  notifications.value.forEach(n => saveReadId(n.id))
   notifications.value = []
   notiCount.value = 0
 }

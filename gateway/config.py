@@ -10,7 +10,9 @@ else:
     # Docker 模式：尝试加载 .env，不存在就用默认值
     load_dotenv()
 
-REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379")
+REDIS_URL = os.getenv("REDIS_URL")
+if not REDIS_URL:
+    raise RuntimeError("REDIS_URL environment variable is required. Set it to redis://host:6379")
 
 JWT_SECRET = os.getenv("JWT_SECRET")
 if not JWT_SECRET:

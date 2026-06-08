@@ -7,7 +7,7 @@ from services.auth_service import (
     register_user, get_user_by_email, send_verification_code,
     verify_code_and_activate, authenticate_user,
 )
-from jwt_utils import create_access_token, create_refresh_token
+from jwt_utils import create_access_token, create_refresh_token, store_refresh_jti, consume_refresh_jti
 from dependencies import get_current_user
 import redis_client
 
@@ -41,7 +41,16 @@ class TokenResponse(BaseModel):
 
 
 @router.post("/register")
-async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
+async def register(req: RegisterRequest, request: Request, db: AsyncSession = Depends(get_db)):
+    r = redis_client.redis
+    client_ip = request.client.host if request.client else "unknown"
+    rate_key = f"register_rate:{client_ip}"
+    attempts = await r.get(rate_key)
+    if attempts and int(attempts) >= 5:
+        raise HTTPException(status_code=429, detail={"error": "too_many_registrations"})
+    await r.incr(rate_key)
+    await r.expire(rate_key, 3600)
+
     existing = await get_user_by_email(db, req.email)
     if existing:
         raise HTTPException(status_code=409, detail={"error": "email_exists"})
@@ -50,7 +59,6 @@ async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
     if pw_error:
         raise HTTPException(status_code=422, detail={"error": pw_error})
     user = await register_user(db, req.username, req.email, req.password)
-    r = redis_client.redis
     ok = await send_verification_code(r, req.email)
     if not ok:
         raise HTTPException(status_code=429, detail={"error": "too_many_codes"})
@@ -73,7 +81,8 @@ async def verify_code(req: VerifyCodeRequest, db: AsyncSession = Depends(get_db)
     if user is None:
         raise HTTPException(status_code=400, detail={"error": "invalid_code"})
     access_token = create_access_token(str(user.id), user.role)
-    refresh_token = create_refresh_token(str(user.id))
+    refresh_token, jti = create_refresh_token(str(user.id))
+    await store_refresh_jti(r, jti, str(user.id))
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
@@ -103,7 +112,8 @@ async def login(req: LoginRequest, request: Request, db: AsyncSession = Depends(
     user.last_login_at = datetime.now(timezone.utc)
     await db.commit()
     access_token = create_access_token(str(user.id), user.role)
-    refresh_token = create_refresh_token(str(user.id))
+    refresh_token, jti = create_refresh_token(str(user.id))
+    await store_refresh_jti(r, jti, str(user.id))
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
@@ -112,11 +122,23 @@ async def login(req: LoginRequest, request: Request, db: AsyncSession = Depends(
 
 
 @router.post("/refresh")
-async def refresh(refresh_token: str, db: AsyncSession = Depends(get_db)):
+async def refresh(refresh_token: str, request: Request, db: AsyncSession = Depends(get_db)):
+    r = redis_client.redis
+    client_ip = request.client.host if request.client else "unknown"
+    rate_key = f"refresh_rate:{client_ip}"
+    attempts = await r.get(rate_key)
+    if attempts and int(attempts) >= 30:
+        raise HTTPException(status_code=429, detail={"error": "too_many_refresh_attempts"})
+    await r.incr(rate_key)
+    await r.expire(rate_key, 900)
+
     try:
         from jwt_utils import decode_token
         payload = decode_token(refresh_token)
         if payload.get("type") != "refresh":
+            raise HTTPException(status_code=401)
+        user_id = await consume_refresh_jti(r, payload.get("jti", ""))
+        if user_id is None:
             raise HTTPException(status_code=401)
         from models.user import User
         from sqlalchemy import select
@@ -125,8 +147,11 @@ async def refresh(refresh_token: str, db: AsyncSession = Depends(get_db)):
         if user is None or user.status != "active":
             raise HTTPException(status_code=401)
         new_access = create_access_token(str(user.id), user.role)
-        new_refresh = create_refresh_token(str(user.id))
+        new_refresh, new_jti = create_refresh_token(str(user.id))
+        await store_refresh_jti(r, new_jti, str(user.id))
         return {"access_token": new_access, "refresh_token": new_refresh}
+    except HTTPException:
+        raise
     except Exception:
         raise HTTPException(status_code=401, detail={"error": "invalid_token"})
 
