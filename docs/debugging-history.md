@@ -18,6 +18,7 @@
 9. [域名迁移与数据丢失事件](#9-域名迁移与数据丢失事件2026-06-18-第七轮)
 10. [注册与支付功能修复](#10-第九轮注册与支付功能修复2026-06-18-下午)
 11. [消费记录修复与用户分模型用量](#11-第十轮消费记录修复与用户分模型用量2026-06-18-后段)
+12. [UI 界面美化 — Naive UI 迁移](#12-第十二轮ui-界面美化--naive-ui-逐步迁移2026-06-18-晚间)
 
 ---
 
@@ -956,6 +957,72 @@ docker compose down -v
 
 ---
 
+## 12. 第十二轮：UI 界面美化 — Naive UI 逐步迁移（2026-06-18 晚间）
+
+### 12.1 背景
+
+前端项目 20 个页面全部使用原生 HTML 元素 + 手写 CSS，无任何 UI 组件库。主要痛点：
+- 所有页面用原生 `<table>`、`<select>`、`<button>`、`<input>`
+- 7 个页面有手写 modal（固定定位 + scoped CSS，风格不统一）
+- 3 处重复的暗色模式实现（TopNavBar / Login / Register）
+- 8+ 处使用 `confirm()` / `alert()` 原生弹窗
+
+### 12.2 方案
+
+引入 **Naive UI** 组件库，按页面逐步替换。不引入 Tailwind CSS（收益与 Naive UI 重叠）。
+
+关键架构决策：
+- **暗色模式**：Naive UI 的 `darkTheme` + 现有 `html.dark` CSS 类双轨并行过渡
+- **Provider 结构**：App.vue 包裹 NConfigProvider + NMessageProvider + NDialogProvider
+- **共享 composable**：`useTheme.js` 统一管理 isDark 状态，替换 3 处重复实现
+
+### 12.3 已完成的阶段
+
+| Phase | 内容 | 文件 | 改动量 |
+|-------|------|------|--------|
+| 0 | 基础设施 | App.vue, useTheme.js, naive-theme-overrides.js, TopNavBar.vue, Login.vue, Register.vue | +289/-21 行 |
+| 1 | **Keys.vue** — 令牌管理 | Keys.vue | +264/-331 行 |
+| 2 | **Dashboard + AdminDashboard** | Dashboard.vue, AdminDashboard.vue | +222/-159 行 |
+| 3 | **Users + AdminUserDaily + AdminUserUsage** | Users.vue, AdminUserDaily.vue, AdminUserUsage.vue | +294/-351 行 |
+
+### 12.4 组件替换对照
+
+| 已替换的模式 | 原实现 | Naive UI 替代 |
+|-------------|--------|---------------|
+| 表格 | `<table class="data-table">` | `NDataTable`（排序、列管理、选择） |
+| 模态框 | 手写 `v-if` overlay + content | `NModal`（卡片预设、动画） |
+| 按钮 | `<button class="btn btn-*">` | `NButton`（type、size props） |
+| 输入框 | `<input class="form-input">` | `NInput` / `NInputNumber` |
+| 选择器 | `<select class="form-select">` | `NSelect`（支持多选、搜索） |
+| 状态徽章 | `<span class="badge badge-*">` | `NTag` |
+| Stat 卡片 | `.stat-card.mc-*` | `NCard` + `NStatistic` |
+| 暗色模式 | 3 处各自实现 `isDark`/`toggleTheme` | 共享 `useTheme()` composable |
+| `confirm()` | 浏览器原生 | `useDialog().warning()` / `NPopconfirm` |
+| `alert()` toast | 手写 div 定位 | `useMessage().*()` |
+| 分页 | 手写上一步/下一步按钮 | `NPagination` |
+| 空状态 | `.empty-state` div | `NEmpty` |
+| 手写 FAQ 折叠 | `@click f.open` | `NCollapse` / `NCollapseItem` |
+| 日期筛选 | `<input type="date">` | `NDatePicker` |
+
+### 12.5 当前 bundle 尺寸变化
+
+| 指标 | 迁移前 | 当前 |
+|------|--------|------|
+| JS bundle | ~62 KB | 1,037 KB (291 KB gzip) |
+| CSS bundle | ~25 KB | 24 KB |
+
+**说明**：Naive UI 按需引入后 tree-shaking 打包，1MB 对管理后台可接受。
+
+### 12.6 剩余页面（13 个）
+
+| Phase | 页面 | 优先级 |
+|-------|------|--------|
+| 4 | Suppliers, Breakers, AdminUsage, Payments, Pricing, Announcements, PlanManager | 中 |
+| 5 | Plans, Usage, Settings, Playground, Models | 中 |
+| 6 | Login, Register（已有 useTheme 集成，仅替换表单组件） | 低 |
+
+---
+
 |------|------|
 | 2026-06-16 | 始建文档，记录流式问题排查过程 |
 | 2026-06-17 | 补充熔断器、模型映射、nginx 头污染、docker-compose 差异、DLP 加密、常见问题速查 |
@@ -969,3 +1036,4 @@ docker compose down -v
 | 2026-06-18 (第九轮) | 注册失败、容器重启、余额查询报错、收款码配置等问题修复 |
 | 2026-06-18 (最终确认) | **流式问题确认已解决**；GitHub 仓库配置完成 |
 | 2026-06-18 (第十轮) | Consumer 消费记录 bug 修复、user-daily 部署到服务器、新增用户分模型用量页面 |
+| 2026-06-18 (第十二轮) | UI 美化：Naive UI 迁移 Phase 0-3，已改 7/20 个页面 |
