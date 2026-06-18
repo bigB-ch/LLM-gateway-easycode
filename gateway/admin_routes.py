@@ -113,7 +113,9 @@ async def check_balance(provider: str, _admin: dict = Depends(require_admin)):
         (cls for cls in ADAPTER_CLASSES if cls.provider_name == provider), None
     )
     if adapter_cls is None:
-        return {"provider": provider, "balance": None, "error": "no_adapter_class"}
+        # Return stored balance if adapter not found
+        stored_balance = cfg.get("balance", 0)
+        return {"provider": provider, "balance": stored_balance, "currency": "CNY", "cached": True}
 
     adapter = adapter_cls(api_key=cfg["api_key"], base_url=cfg["base_url"])
     try:
@@ -123,11 +125,15 @@ async def check_balance(provider: str, _admin: dict = Depends(require_admin)):
             cfg["balance"] = result["balance"]
             await redis.hset("supplier_configs", provider, json.dumps(cfg))
             return {"provider": provider, "balance": result["balance"], "currency": result["currency"]}
-        return {"provider": provider, "balance": None, "error": "not_supported"}
+        # If adapter doesn't support balance query, return stored balance
+        stored_balance = cfg.get("balance", 0)
+        return {"provider": provider, "balance": stored_balance, "currency": "CNY", "cached": True}
     except asyncio.TimeoutError:
-        return {"provider": provider, "balance": None, "error": "timeout"}
+        stored_balance = cfg.get("balance", 0)
+        return {"provider": provider, "balance": stored_balance, "currency": "CNY", "cached": True, "error": "timeout"}
     except Exception as e:
-        return {"provider": provider, "balance": None, "error": str(e)}
+        stored_balance = cfg.get("balance", 0)
+        return {"provider": provider, "balance": stored_balance, "currency": "CNY", "cached": True, "error": str(e)}
 
 
 # ── Model Catalog ──
