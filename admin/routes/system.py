@@ -101,3 +101,39 @@ async def delete_announcement(
             await _save_announcements(db, items)
             return {"status": "deleted"}
     raise HTTPException(status_code=404, detail={"error": "not_found"})
+
+
+class PaymentConfigRequest(BaseModel):
+    app_id: str | None = None
+    alipay_public_key: str | None = None
+    private_key: str | None = None
+    alipay_qr_url: str | None = None
+    wechat_qr_url: str | None = None
+
+
+@router.get("/payment-config")
+async def get_payment_config(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(SystemConfig).where(SystemConfig.key == "payment_config"))
+    cfg = result.scalar_one_or_none()
+    if cfg and cfg.value:
+        return cfg.value
+    return {"alipay_qr_url": "", "wechat_qr_url": ""}
+
+
+@router.put("/payment-config")
+async def save_payment_config(
+    req: PaymentConfigRequest,
+    _admin: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(SystemConfig).where(SystemConfig.key == "payment_config"))
+    cfg = result.scalar_one_or_none()
+    value = req.model_dump(exclude_none=True)
+    if cfg:
+        merged = {**cfg.value, **value}
+        cfg.value = merged
+    else:
+        cfg = SystemConfig(key="payment_config", value=value)
+        db.add(cfg)
+    await db.commit()
+    return {"message": "saved", "config": cfg.value if cfg else value}
