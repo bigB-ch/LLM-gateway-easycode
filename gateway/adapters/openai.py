@@ -7,6 +7,13 @@ class OpenAIAdapter(BaseAdapter):
     model_patterns = ["gpt-", "o1-", "o3-"]
     provider_name = "openai"
 
+    def __init__(self, api_key: str, base_url: str):
+        # Ensure base_url ends with /v1 for OpenAI-compatible APIs
+        url = base_url.rstrip("/")
+        if not url.endswith("/v1"):
+            url += "/v1"
+        super().__init__(api_key, url)
+
     async def chat_completion(self, request: UnifiedRequest) -> UnifiedResponse:
         client = await self.get_client()
         body = {
@@ -48,6 +55,65 @@ class OpenAIAdapter(BaseAdapter):
             ),
             provider="openai",
         )
+
+    async def stream_completion(self, request: UnifiedRequest):
+        """Stream using OpenAI SSE format. Yields (text_delta, finish_reason, usage_dict)."""
+        import json as _json
+        client = await self.get_client()
+        body = {
+            "model": request.model,
+            "messages": [{"role": m.role, "content": m.content} for m in request.messages],
+            "stream": True,
+        }
+        if request.temperature is not None:
+            body["temperature"] = request.temperature
+        if request.max_tokens is not None:
+            body["max_tokens"] = request.max_tokens
+
+        prompt_tokens = 0
+        completion_tokens = 0
+        finish_reason = None
+
+        async with client.stream(
+            "POST",
+            f"{self.base_url}/chat/completions",
+            json=body,
+            headers={"Authorization": f"Bearer {self.api_key}"},
+        ) as resp:
+            resp.raise_for_status()
+            async for line in resp.aiter_lines():
+                if not line.startswith("data: "):
+                    continue
+                data_str = line[6:]
+                if data_str == "[DONE]":
+                    break
+                try:
+                    chunk = _json.loads(data_str)
+                except _json.JSONDecodeError:
+                    continue
+                choices = chunk.get("choices", [])
+                if not choices:
+                    continue
+                delta = choices[0].get("delta", {})
+                fr = choices[0].get("finish_reason")
+                if fr:
+                    finish_reason = fr
+                if "usage" in chunk:
+                    prompt_tokens = chunk["usage"].get("prompt_tokens", prompt_tokens)
+                    completion_tokens = chunk["usage"].get("completion_tokens", completion_tokens)
+                # Separate reasoning_content (thinking) from content (text)
+                rc = delta.get("reasoning_content")
+                ct = delta.get("content")
+                if rc:
+                    yield ({"type": "thinking", "text": rc}, None, None)
+                if ct:
+                    yield ({"type": "text", "text": ct}, None, None)
+
+        yield (None, finish_reason, {
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": prompt_tokens + completion_tokens,
+        })
 
     async def get_balance(self) -> dict | None:
         try:

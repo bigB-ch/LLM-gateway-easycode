@@ -3,8 +3,7 @@ import sys
 import os
 import uuid
 import time
-from fastapi import Request
-from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi import FastAPI, Request
 
 _request_id_ctx: dict = {}
 
@@ -50,8 +49,12 @@ def setup_logging(name: str) -> logging.Logger:
     return logger
 
 
-class RequestIDMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
+def request_id_middleware(app: FastAPI):
+    """Apply request ID + timing as pure ASGI middleware,
+    avoiding BaseHTTPMiddleware which can interfere with streaming responses.
+    """
+    @app.middleware("http")
+    async def add_request_id(request: Request, call_next):
         rid = request.headers.get("X-Request-ID", uuid.uuid4().hex[:16])
         request.state.request_id = rid
         _request_id_ctx["rid"] = rid

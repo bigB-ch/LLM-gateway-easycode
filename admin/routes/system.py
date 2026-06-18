@@ -38,10 +38,12 @@ async def _save_announcements(db: AsyncSession, items: list):
 
 
 _DEFAULT_FAQ = [
-    {"id": "1", "q": "How to create an API key?", "a": "Go to Keys page and click '+ Add Key'. The key is shown only once — save it immediately."},
-    {"id": "2", "q": "How to top up?", "a": "Go to Plans page and click on a quick amount or enter custom amount. Balance is deducted from your account."},
-    {"id": "3", "q": "Which models are supported?", "a": "DeepSeek V3/V4, OpenAI GPT-4o, Claude, Gemini, Qwen, GLM, Kimi, MiniMax and more. Check the Models page for full catalog."},
-    {"id": "4", "q": "What is the API base URL?", "a": f"Use https://your-domain.com/v1 as the base URL. All models use the OpenAI chat completions format."},
+    {"id": "1", "q": "如何创建 API 密钥？", "a": "进入令牌管理页面，点击"+ 添加令牌"，填写名称和权限，密钥仅显示一次，请立即保存。"},
+    {"id": "2", "q": "如何充值？", "a": "进入钱包管理页面，选择充值金额和支付方式，扫码支付后等待管理员审核到账。"},
+    {"id": "3", "q": "支持哪些模型？", "a": "支持 DeepSeek V3/V4、OpenAI GPT-4o、Claude、Gemini、Qwen、GLM、Kimi、MiniMax、可灵等主流模型。进入模型广场可查看完整列表和价格。"},
+    {"id": "4", "q": "API 接口地址是什么？", "a": "使用 https://8.163.17.83/v1 作为接口地址，格式兼容 OpenAI Chat Completions API。"},
+    {"id": "5", "q": "如何查看用量？", "a": "进入使用日志页面，可按日期范围和模型筛选查看每次调用的 Token 消耗和费用。"},
+    {"id": "6", "q": "余额怎么扣费？", "a": "按实际消耗的 Token 计费，费用 = 模型价格 x 加价系数。优先消耗套餐内 Token，套餐不足时从余额扣减。"},
 ]
 
 
@@ -49,7 +51,7 @@ class AnnouncementUpsert(BaseModel):
     content: str
 
 
-# ── Announcements (user-facing) ──
+# 鈹�鈹� Announcements (user-facing) 鈹�鈹�
 
 @router.get("/announcements")
 async def get_announcements(
@@ -60,7 +62,7 @@ async def get_announcements(
     return {"items": items}
 
 
-# ── Announcement management (admin) ──
+# 鈹�鈹� Announcement management (admin) 鈹�鈹�
 
 @router.get("/admin/announcements")
 async def list_announcements_admin(
@@ -164,7 +166,7 @@ async def save_payment_config(
     return {"message": "saved", "config": cfg.value if cfg else value}
 
 
-# ── Model Pricing ──
+# 鈹�鈹� Model Pricing 鈹�鈹�
 
 @router.get("/pricing")
 async def get_pricing(db: AsyncSession = Depends(get_db)):

@@ -87,10 +87,10 @@
             <tr v-for="log in filteredLogs" :key="log.id">
               <td class="text-secondary" style="font-size:12px">{{ fmtTime(log.created_at) }}</td>
               <td><span class="key-masked" style="font-size:12px">{{ log.key_name || '默认' }}</span></td>
-              <td class="text-secondary" style="font-size:12px">{{ log.group || '-' }}</td>
-              <td><span class="badge badge-primary" style="font-size:10px">{{ log.type || 'chat' }}</span></td>
+              <td class="text-secondary" style="font-size:12px">-</td>
+              <td><span class="badge badge-primary" style="font-size:10px">chat</span></td>
               <td><span class="inline-code" style="font-size:11px">{{ log.model }}</span></td>
-              <td class="text-secondary" style="font-size:12px">{{ log.duration_ms || '-' }}ms</td>
+              <td class="text-secondary" style="font-size:12px">{{ log.latency_ms || '-' }}ms</td>
               <td style="font-size:12px">{{ log.prompt_tokens || 0 }}</td>
               <td style="font-size:12px">{{ log.completion_tokens || 0 }}</td>
               <td style="font-size:12px;font-weight:500">&yen;{{ log.cost_yuan || '0.00' }}</td>

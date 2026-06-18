@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import AsyncGenerator
 import httpx
 from schemas import UnifiedRequest, UnifiedResponse
 
@@ -9,7 +10,7 @@ class BaseAdapter(ABC):
 
     def __init__(self, api_key: str, base_url: str):
         self.api_key = api_key
-        self.base_url = base_url
+        self.base_url = base_url.rstrip("/")
         self._client: httpx.AsyncClient | None = None
 
     async def get_client(self) -> httpx.AsyncClient:
@@ -20,6 +21,10 @@ class BaseAdapter(ABC):
     @abstractmethod
     async def chat_completion(self, request: UnifiedRequest) -> UnifiedResponse:
         ...
+
+    async def stream_completion(self, request: UnifiedRequest) -> AsyncGenerator[tuple[str | None, str | None, dict | None], None]:
+        """Stream completion. Yields (text_delta, finish_reason, usage_dict). Default: raises NotImplementedError."""
+        raise NotImplementedError(f"stream_completion not implemented for {self.provider_name}")
 
     @abstractmethod
     async def health_check(self) -> bool:

@@ -79,6 +79,9 @@ async def purchase_plan(
 
     u.balance -= plan.price
 
+    from redis_client import sync_balance_cache as _sync
+    await _sync(str(u.id), u.balance)
+
     from datetime import datetime, timedelta, timezone
     up = UserPlan(
         id=uuid.uuid4(),
@@ -88,6 +91,9 @@ async def purchase_plan(
         expires_at=datetime.now(timezone.utc) + timedelta(days=plan.duration_days),
     )
     db.add(up)
+    from redis_client import redis as _r
+    try: await _r.set(f"user_has_plans:{u.id}", "1", ex=86400)
+    except: pass
     await db.commit()
     return {"message": "purchased", "balance_yuan": round(u.balance / 100, 2)}
 
@@ -156,6 +162,9 @@ async def redeem_code(
     user_result = await db.execute(select(User).where(User.id == user["user_id"]))
     u = user_result.scalar_one()
     u.balance += amount_fen
+
+    from redis_client import sync_balance_cache as _sync2
+    await _sync2(str(u.id), u.balance)
 
     rec = RechargeRecord(
         id=uuid.uuid4(),
@@ -252,6 +261,7 @@ async def alipay_query(
             user_result = await db.execute(select(User).where(User.id == user["user_id"]))
             u = user_result.scalar_one()
             u.balance += rec.amount
+            await _sync(str(u.id), u.balance)
             await db.commit()
             return {
                 "paid": True,
@@ -300,6 +310,7 @@ async def alipay_notify(request: Request):
                 user_result = await db.execute(select(User).where(User.id == rec.user_id))
                 u = user_result.scalar_one()
                 u.balance += rec.amount
+                await _sync(str(u.id), u.balance)
                 await db.commit()
     return "success"
 
@@ -385,6 +396,7 @@ async def verify_payment(
         user_result = await db.execute(select(User).where(User.id == rec.user_id))
         u = user_result.scalar_one()
         u.balance += rec.amount
+        await _sync(str(u.id), u.balance)
         await db.commit()
         return {"message": "payment_approved", "balance_yuan": round(u.balance / 100, 2)}
     else:

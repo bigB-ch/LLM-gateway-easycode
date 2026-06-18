@@ -1,28 +1,8 @@
 # Fallback pricing — overridden by Redis "pricing_config" if admin customizes
 _DEFAULT_PRICING = {
-    # OpenAI
-    "gpt-4":          {"prompt": 210, "completion": 420},
-    "gpt-4-turbo":    {"prompt": 70,  "completion": 210},
-    "gpt-3.5-turbo":  {"prompt": 3.5, "completion": 10.5},
-    "gpt-4o":         {"prompt": 35,  "completion": 105},
-    "gpt-4o-mini":    {"prompt": 1.05,"completion": 4.2},
-    "o1":             {"prompt": 105, "completion": 420},
-    "o3":             {"prompt": 70,  "completion": 280},
-    "o3-mini":        {"prompt": 7.7, "completion": 30.8},
-    "gpt-4.1":         {"prompt": 14,  "completion": 56},
-    # Anthropic Claude
-    "claude-3-opus":                    {"prompt": 105, "completion": 525},
-    "claude-3-sonnet":                  {"prompt": 21,  "completion": 105},
-    "claude-sonnet-4-20250514":         {"prompt": 21,  "completion": 105},
-    "claude-3-5-haiku-20241022":        {"prompt": 5.6, "completion": 28},
-    # Google Gemini
-    "gemini-pro":         {"prompt": 3.5,"completion": 10.5},
-    "gemini-2.5-flash":   {"prompt": 2.1,"completion": 10.5},
-    "gemini-2.5-pro":     {"prompt": 8.4,"completion": 35},
     # DeepSeek
-    "deepseek-v3.2":      {"prompt": 2,  "completion": 3,   "cache": 0.4},
     "deepseek-v4-flash":  {"prompt": 1,  "completion": 2,   "cache": 0.02},
-    "deepseek-v4-pro":    {"prompt": 12, "completion": 24,  "cache": 2.4},
+    "deepseek-v4-pro":    {"prompt": 3,  "completion": 6,   "cache": 0.025},
     # Qwen / Alibaba
     "qwen-turbo":         {"prompt": 0.5,"completion": 0.5},
     "qwen-plus":          {"prompt": 0.8,"completion": 2,   "cache": 0.08},
@@ -52,6 +32,8 @@ _DEFAULT_PRICING = {
     "kling-v2-6":         {"prompt": 0,  "completion": 0,  "per_use": 1.2},
     "kling-v3":           {"prompt": 0,  "completion": 0,  "per_use": 1.2},
     "kling-v3-omni":      {"prompt": 0,  "completion": 0,  "per_use": 1},
+    # Xunfei MaaS
+    "xunfei-qwen": {"prompt": 0.8, "completion": 2},
 }
 _DEFAULT_MARKUP = 1.5
 

@@ -1,6 +1,4 @@
-import { ref } from 'vue'
-
-const locale = ref(localStorage.getItem('lang') || 'zh')
+const locale = { value: 'zh' }
 
 const messages = {
   zh: {
@@ -13,6 +11,7 @@ const messages = {
     search: '搜索', refresh: '刷新', theme: '切换主题', language: '语言',
     adminDashboard: '数据看板', adminSuppliers: '供应商管理', adminBreakers: '熔断器监控',
     adminUsers: '用户管理', adminPlans: '套餐管理', adminUsage: '用量日志',
+        adminUserDaily: '用户每日用量',
     adminBackToUser: '返回用户端', adminPanel: '管理后台',
     // Login
     loginTitle: '登录', loginSubtitle: '让 Coding 更简单', username: '用户名',
@@ -69,7 +68,8 @@ const messages = {
     reset: '重置', columnSettings: '列设置', all: '全部', success: '成功',
     error: '失败', time: '时间', token: '令牌', type: '类型',
     model: '模型', duration: '用时/首字', input: '输入', output: '输出',
-    cost: '花费', ip: 'IP', details: '详情', prevPage: '上一页',
+    cost: '花费', clickToCopy: '点击复制', clickToCopyHint: '点击模型名称可复制模型ID', copyModelSuccess: '复制模型名成功', ip: 'IP', details: '详情', prevPage: '上一页',
+    date: '日期', email: '邮箱', calls: '调用次数', model: '模型', query: '查询',
     nextPage: '下一页', callDetail: '调用详情',
     noUsageData: '暂无任何模型调用记录，创建令牌后开始使用 API',
     // Plans
@@ -180,7 +180,8 @@ const messages = {
     theme: 'Toggle Theme', language: 'Language',
     adminDashboard: 'Dashboard', adminSuppliers: 'Suppliers',
     adminBreakers: 'Circuit Breakers', adminUsers: 'Users', adminPlans: 'Plans',
-    adminUsage: 'Usage Logs', adminBackToUser: 'Back to User', adminPanel: 'Admin Panel',
+    adminUsage: 'Usage Logs',
+        adminUserDaily: 'User Daily Usage', adminBackToUser: 'Back to User', adminPanel: 'Admin Panel',
     // Login
     loginTitle: 'Login', loginSubtitle: 'Make Coding Easier', username: 'Username',
     password: 'Password', rememberMe: 'Remember Me', forgotPassword: 'Forgot Password?',
@@ -239,7 +240,8 @@ const messages = {
     reset: 'Reset', columnSettings: 'Columns', all: 'All', success: 'Success',
     error: 'Error', time: 'Time', token: 'Token', type: 'Type',
     model: 'Model', duration: 'Duration', input: 'Input', output: 'Output',
-    cost: 'Cost', ip: 'IP', details: 'Details', prevPage: 'Previous',
+    cost: 'Cost', clickToCopy: 'Click to copy', clickToCopyHint: 'Click model name to copy ID', copyModelSuccess: 'Model name copied', ip: 'IP', details: 'Details', prevPage: 'Previous',
+    date: 'Date', email: 'Email', calls: 'Calls', model: 'Model', query: 'Query',
     nextPage: 'Next', callDetail: 'Call Details',
     noUsageData: 'No usage records. Create an API key to start using the API.',
     // Plans
@@ -356,10 +358,5 @@ export function useI18n() {
     return text
   }
 
-  const toggleLang = () => {
-    locale.value = locale.value === 'zh' ? 'en' : 'zh'
-    localStorage.setItem('lang', locale.value)
-  }
-
-  return { locale, t, toggleLang }
+  return { locale, t }
 }

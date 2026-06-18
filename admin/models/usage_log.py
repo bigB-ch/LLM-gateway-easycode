@@ -26,6 +26,7 @@ class UsageLog(Base):
     latency_ms: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[str] = mapped_column(String(16), nullable=False)
     error_msg: Mapped[str | None] = mapped_column(Text)
+    ip: Mapped[str | None] = mapped_column(String(45))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
     __table_args__ = (

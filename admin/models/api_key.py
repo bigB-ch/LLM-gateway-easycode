@@ -17,6 +17,7 @@ class ApiKey(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     key_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     key_prefix: Mapped[str] = mapped_column(String(10), nullable=False)
+    encrypted_key: Mapped[str | None] = mapped_column(Text)
     name: Mapped[str | None] = mapped_column(String(128))
     rate_limit: Mapped[int] = mapped_column(Integer, default=60, nullable=False)
     model_allowlist: Mapped[str | None] = mapped_column(Text)

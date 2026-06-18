@@ -1,5 +1,8 @@
 <template>
   <div>
+    <!-- Copy toast -->
+    <div v-if="copyTip" style="position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#059669;color:#fff;padding:8px 20px;border-radius:8px;font-size:13px;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.15)">{{ copyTip }}</div>
+
     <!-- Page header + actions -->
     <div class="flex-between mb-16">
       <h1 class="page-title">{{ t('tokenManagement') }}</h1>
@@ -13,7 +16,8 @@
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <button class="btn btn-primary btn-sm" @click="showCreate = true; dragX = 0; dragY = 0">{{ t('addToken') }}</button>
         <button class="btn btn-outline btn-sm" :disabled="!selected.length" @click="batchCopy">&#x2398; {{ t('copySelected') }}</button>
-        <button class="btn btn-sm" :disabled="!selected.length" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca" @click="batchRevoke">&#x1F5D1; {{ t('deleteSelected') }}</button>
+        <button class="btn btn-sm" :disabled="!selected.length" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca" @click="batchRevoke">吊销所选</button>
+        <button class="btn btn-sm" :disabled="!selected.length" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca" @click="batchDelete">删除所选</button>
 
         <div style="flex:1"></div>
 
@@ -117,8 +121,9 @@
               <span style="font-weight:600;color:#166534;font-size:13px">{{ t('tokenGenerated') }}</span>
             </div>
             <div style="display:flex;gap:8px">
-              <code style="flex:1;background:#fff;border:1px solid #bbf7d0;padding:10px 14px;border-radius:6px;font-family:var(--font-mono);font-size:12px;word-break:break-all">{{ newKey }}</code>
-              <button class="btn btn-outline btn-sm" @click="copyText(newKey)">复制</button>
+              <code style="flex:1;background:#fff;border:1px solid #bbf7d0;padding:10px 14px;border-radius:6px;font-family:var(--font-mono);font-size:12px;overflow-x:auto;white-space:nowrap">{{ newKey }}</code>
+              <button class="btn btn-primary btn-sm" @click="copyText(newKey)">复制完整密钥</button>
+              <span class="copy-feedback" style="font-size:11px;color:var(--success);align-self:center"></span>
             </div>
           </div>
         </div>
@@ -166,7 +171,7 @@
               <td>
                 <div style="display:flex;align-items:center;gap:6px">
                   <code style="font-family:var(--font-mono);font-size:12px;color:var(--text)">{{ key.key_prefix }}&bull;&bull;&bull;</code>
-                  <button class="btn btn-outline btn-xs" @click="copyText(key.key_prefix)" title="复制">&#x2398;</button>
+                  <button v-if="key.status==='active'" class="btn btn-outline btn-xs" style="margin-left:4px" @click="copyFullKey(key.id)">复制</button>
                 </div>
               </td>
               <td class="text-secondary" style="font-size:12px">{{ key.models || '全部' }}</td>
@@ -175,7 +180,9 @@
               <td class="text-secondary" style="font-size:12px">{{ key.last_used_at ? fmtDate(key.last_used_at) : '从未使用' }}</td>
               <td class="text-secondary" style="font-size:12px">{{ key.expires_at ? fmtDate(key.expires_at) : '永不过期' }}</td>
               <td>
+                <button v-if="key.status === 'active'" class="btn btn-xs" style="margin-right:4px" @click="regenerateKey(key)">重新生成</button>
                 <button v-if="key.status === 'active'" class="btn btn-xs" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca" @click="revokeKey(key.id)">吊销</button>
+                <button v-if="key.status === 'revoked'" class="btn btn-xs" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca" @click="deleteKey(key.id)">删除</button>
                 <span v-else class="text-muted">-</span>
               </td>
             </tr>
@@ -206,6 +213,7 @@ const keys = ref([])
 const showCreate = ref(false)
 const newKeyName = ref('')
 const newKey = ref('')
+const copyTip = ref('')
 const creating = ref(false)
 const formName = ref('')
 const formGroup = ref('default')
@@ -329,20 +337,83 @@ async function createKey() {
   } catch (e) { alert(e.message) } finally { creating.value = false }
 }
 
+async function copyFullKey(id) {
+  try {
+    const data = await api.revealKey(id)
+    await copyText(data.api_key)
+    copyTip.value = '已复制'
+    setTimeout(() => copyTip.value = '', 2000)
+  } catch (e) { alert('复制失败: ' + (e.message || '未知错误')) }
+}
+
 async function revokeKey(id) {
-  if (!confirm('确定吊销此令牌？')) return
-  await api.revokeKey(id)
-  const data = await api.listKeys()
-  keys.value = data.items
-  selected.value = selected.value.filter(x => x !== id)
+  if (!confirm('确定吊销此令牌？吊销后不可恢复。')) return
+  try {
+    await api.revokeKey(id)
+    const data = await api.listKeys()
+    keys.value = data.items
+    selected.value = selected.value.filter(x => x !== id)
+  } catch (e) {
+    alert('吊销失败: ' + (e.message || '未知错误'))
+  }
+}
+
+async function deleteKey(id) {
+  if (!confirm('确定永久删除此令牌？此操作不可恢复！')) return
+  try {
+    await api.deleteKey(id)
+    const data = await api.listKeys()
+    keys.value = data.items
+    selected.value = selected.value.filter(x => x !== id)
+  } catch (e) {
+    alert('删除失败: ' + (e.message || '未知错误'))
+  }
+}
+
+async function regenerateKey(key) {
+  if (!confirm('重新生成将吊销旧令牌并创建新令牌，旧令牌立即失效。确定继续？')) return
+  try {
+    // Create new key with same settings
+    const data = await api.createKey(key.name || 'regenerated', key.rate_limit || 60, {
+      token_group: key.token_group || 'default',
+      ip_whitelist: key.ip_whitelist || null,
+      model_allowlist: key.models || null,
+      count: 1,
+    })
+    // Revoke old key
+    await api.revokeKey(key.id)
+    // Show new key
+    newKey.value = data.api_key || (data.keys && data.keys[0]?.api_key)
+    showCreate.value = true
+    // Refresh list
+    const list = await api.listKeys()
+    keys.value = list.items
+  } catch (e) {
+    alert('重新生成失败: ' + (e.message || '未知错误'))
+  }
 }
 
 async function batchRevoke() {
   if (!selected.value.length) return
-  if (!confirm(`确定吊销 ${selected.value.length} 个令牌？`)) return
+  if (!confirm(`确定吊销 ${selected.value.length} 个令牌？吊销后不可恢复。`)) return
+  let failed = 0
   for (const id of selected.value) {
-    await api.revokeKey(id).catch(() => {})
+    try { await api.revokeKey(id) } catch (e) { failed++ }
   }
+  if (failed) alert(`${failed} 个吊销失败`)
+  const data = await api.listKeys()
+  keys.value = data.items
+  selected.value = []
+}
+
+async function batchDelete() {
+  if (!selected.value.length) return
+  if (!confirm(`确定永久删除 ${selected.value.length} 个令牌？此操作不可恢复！`)) return
+  let failed = 0
+  for (const id of selected.value) {
+    try { await api.deleteKey(id) } catch (e) { failed++ }
+  }
+  if (failed) alert(`${failed} 个删除失败`)
   const data = await api.listKeys()
   keys.value = data.items
   selected.value = []
@@ -357,7 +428,25 @@ function doSearch() { /* filteredKeys is reactive */ }
 function resetSearch() { searchName.value = ''; searchKey.value = '' }
 
 async function copyText(text) {
-  try { await navigator.clipboard.writeText(text) } catch (e) { /* */ }
+  try {
+    await navigator.clipboard.writeText(text)
+  } catch (e) {
+    // Fallback for older browsers or blocked clipboard API
+    const ta = document.createElement('textarea')
+    ta.value = text
+    ta.style.position = 'fixed'; ta.style.opacity = '0'
+    document.body.appendChild(ta)
+    ta.select()
+    document.execCommand('copy')
+    document.body.removeChild(ta)
+  }
+  // Brief feedback
+  const len = text.length
+  if (len > 60) {
+    // This is a full key - show brief success
+    const el = document.querySelector('.copy-feedback')
+    if (el) { el.textContent = '已复制'; setTimeout(() => el.textContent = '', 2000) }
+  }
 }
 </script>
 

@@ -5,35 +5,28 @@
       <button class="btn btn-outline btn-sm" @click="loadPayments">{{ t('refresh') }}</button>
     </div>
 
-    <!-- Alipay Config -->
+    <!-- Fixed Payment QR Codes -->
     <div class="card card-padded mb-16">
-      <h3 class="section-title mb-12">支付宝商户配置</h3>
+      <h3 class="section-title mb-12">固定收款码（手动审核模式）</h3>
       <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px">
-        需要开通支付宝当面付（F2F）。前往 open.alipay.com 创建应用获取以下参数。
-        未配置时使用手动审核模式。
+        上传固定的支付宝/微信收款码图片链接。用户扫码付款后提交审核，管理员手动确认到账。
       </p>
-      <div style="display:flex;flex-direction:column;gap:12px">
-        <div style="display:flex;gap:16px;flex-wrap:wrap">
-          <div style="flex:1;min-width:200px">
-            <label class="form-label">App ID</label>
-            <input v-model="alipayAppId" class="form-input" placeholder="2021xxxxxxxxxxxx" />
-          </div>
-          <div style="flex:1;min-width:200px">
-            <label class="form-label">支付宝公钥</label>
-            <input v-model="alipayPublicKey" class="form-input" placeholder="MIIBIjANBgkq..." />
-          </div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px">
+        <div style="flex:1;min-width:250px">
+          <label class="form-label">支付宝收款码链接</label>
+          <input v-model="alipayQrUrl" class="form-input" placeholder="https://..." />
         </div>
-        <div>
-          <label class="form-label">应用私钥（RSA2）</label>
-          <textarea v-model="alipayPrivateKey" class="form-input" rows="4" placeholder="-----BEGIN RSA PRIVATE KEY-----"></textarea>
-        </div>
-        <div style="align-self:flex-start">
-          <button class="btn btn-primary" @click="saveAlipayConfig" :disabled="savingQr">{{ savingQr ? '保存中...' : '保存支付宝配置' }}</button>
+        <div style="flex:1;min-width:250px">
+          <label class="form-label">微信收款码链接</label>
+          <input v-model="wechatQrUrl" class="form-input" placeholder="https://..." />
         </div>
       </div>
+      <p style="font-size:11px;color:var(--text-muted);margin-bottom:12px">可将收款码上传到图床（如 imgse.com），粘贴图片链接即可</p>
+      <button class="btn btn-primary btn-sm" @click="saveQrConfig" :disabled="savingQr">{{ savingQr ? '保存中...' : '保存收款码' }}</button>
       <div v-if="qrMsg" :class="qrMsg.includes('失败')?'alert alert-error':'alert alert-success'" style="font-size:12px;margin-top:8px">{{ qrMsg }}</div>
     </div>
 
+    <!-- Payment Review Table -->
     <div class="card">
       <div class="table-wrap" style="border:none">
         <table class="data-table">
@@ -72,45 +65,41 @@ import { useI18n } from '../i18n'
 const { t } = useI18n()
 
 const payments = ref([])
-const alipayAppId = ref(''); const alipayPublicKey = ref(''); const alipayPrivateKey = ref('')
-const savingQr = ref(false); const qrMsg = ref('')
+const alipayQrUrl = ref('')
+const wechatQrUrl = ref('')
+const savingQr = ref(false)
+const qrMsg = ref('')
 
-onMounted(() => { loadPayments(); loadAlipayConfig() })
+onMounted(() => { loadPayments(); loadQrConfig() })
 
-async function loadAlipayConfig() {
-  try { const cfg = await api.getPaymentConfig(); alipayAppId.value = cfg.app_id || ''; alipayPublicKey.value = cfg.alipay_public_key || ''; alipayPrivateKey.value = cfg.private_key || '' } catch(e){}
+async function loadQrConfig() {
+  try {
+    const cfg = await api.getPaymentConfig()
+    alipayQrUrl.value = cfg.alipay_qr_url || ''
+    wechatQrUrl.value = cfg.wechat_qr_url || ''
+  } catch(e) { /* */ }
 }
-async function saveAlipayConfig() {
+
+async function saveQrConfig() {
   savingQr.value = true; qrMsg.value = ''
   try {
     await api.savePaymentConfig({
-      app_id: alipayAppId.value, alipay_public_key: alipayPublicKey.value, private_key: alipayPrivateKey.value,
+      alipay_qr_url: alipayQrUrl.value,
+      wechat_qr_url: wechatQrUrl.value,
     })
-    qrMsg.value = 'Alipay config saved'
-  } catch(e) { qrMsg.value = 'Save failed: ' + e.message } finally { savingQr.value = false }
+    qrMsg.value = '保存成功'
+  } catch(e) { qrMsg.value = '保存失败: ' + e.message } finally { savingQr.value = false }
 }
+
 async function loadPayments() {
-  try { payments.value = (await api.getPendingPayments()).items || [] } catch(e){}
+  try { payments.value = (await api.getPendingPayments()).items || [] } catch(e) { /* */ }
 }
 
 async function verify(id, approved) {
   const label = approved ? '通过' : '拒绝'
   if (!confirm(`确定${label}这笔支付？`)) return
-  try {
-    await api.verifyPayment(id, approved)
-    loadPayments()
-  } catch(e) { alert('操作失败: ' + e.message) }
-}
-
-async function loadQrConfig() {
-  try { const cfg = await api.getPaymentConfig(); qrAlipay.value = cfg.alipay_qr_url || ''; qrWechat.value = cfg.wechat_qr_url || '' } catch(e){}
-}
-async function saveQrConfig() {
-  savingQr.value = true; qrMsg.value = ''
-  try {
-    await api.savePaymentConfig(qrAlipay.value, qrWechat.value)
-    qrMsg.value = '保存成功'
-  } catch(e) { qrMsg.value = '保存失败: ' + e.message } finally { savingQr.value = false }
+  try { await api.verifyPayment(id, approved); loadPayments() }
+  catch(e) { alert('操作失败: ' + e.message) }
 }
 
 function fmtTime(iso) {

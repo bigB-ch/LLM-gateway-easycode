@@ -44,11 +44,14 @@
           </div>
 
           <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border)">
-            <h3 class="section-title mb-12">{{ t('redeemCodeTitle') }}</h3>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+              <h3 class="section-title mb-0">{{ t('redeemCodeTitle') }}</h3>
+              <span style="font-size:11px;color:#d97706;background:#fef3c7;padding:2px 8px;border-radius:4px">功能改进中，敬请期待</span>
+            </div>
             <div style="display:flex;gap:10px">
-              <input v-model="redeemCode" class="form-input" :placeholder="t('redeemPlaceholder')" style="flex:1;max-width:280px" />
-              <button class="btn btn-outline" @click="redeem" :disabled="!redeemCode || redeeming">
-                {{ redeeming ? t('verifyingBtn') : t('redeemBtn') }}
+              <input v-model="redeemCode" class="form-input" :placeholder="t('redeemPlaceholder')" style="flex:1;max-width:280px;opacity:0.5" disabled />
+              <button class="btn btn-outline" disabled style="opacity:0.5">
+                {{ t('redeemBtn') }}
               </button>
             </div>
           </div>
@@ -97,22 +100,22 @@
         <div class="modal-body text-center">
           <div style="font-size:24px;font-weight:700;color:var(--primary);margin-bottom:16px">&yen;{{ (customAmount * pricePerUnit).toFixed(2) }}</div>
 
-          <!-- Alipay QR Code -->
-          <div v-if="paymentLoading" class="empty-state" style="padding:20px 0;margin-bottom:16px">
-            <div class="empty-state-text" style="font-size:13px">正在生成支付二维码...</div>
+          <!-- Fixed QR Code mode -->
+          <div v-if="fixedQrCode" style="margin-bottom:16px">
+            <img :src="fixedQrCode" alt="QR Code" style="max-width:220px;border:1px solid var(--border-light);border-radius:8px" />
+            <div style="font-size:14px;font-weight:600;margin-top:8px">请扫码转账 {{ (customAmount * pricePerUnit).toFixed(2) }} 元</div>
           </div>
-          <div v-else-if="alipayQrCode" style="margin-bottom:16px">
-            <img :src="alipayQrCode" alt="Alipay QR Code" style="max-width:220px;border:1px solid var(--border-light);border-radius:8px" />
-            <div style="font-size:11px;color:var(--text-muted);margin-top:4px">订单号: {{ alipayOrderNo }}</div>
+          <div v-else-if="paymentLoading" class="empty-state" style="padding:20px 0;margin-bottom:16px">
+            <div class="empty-state-text" style="font-size:13px">加载中...</div>
           </div>
-          <div v-else-if="paymentError" class="alert alert-error" style="font-size:12px;margin-bottom:8px">{{ paymentError }}</div>
-
-          <p style="font-size:12px;color:var(--text-secondary);margin-bottom:16px">请使用支付宝扫描二维码完成支付，支付成功后自动到账</p>
-
-          <button v-if="alipayOrderNo" class="btn btn-outline btn-sm" style="width:100%;margin-bottom:8px" @click="checkAlipayStatus" :disabled="checkingPayment">
-            {{ checkingPayment ? '查询中...' : '已完成支付，查询状态' }}
-          </button>
+          <div v-if="paymentError" class="alert alert-error" style="font-size:12px;margin-bottom:8px">{{ paymentError }}</div>
           <div v-if="paymentSuccess" class="alert alert-success" style="font-size:12px;margin-bottom:8px">{{ paymentSuccess }}</div>
+
+          <!-- Manual confirm button -->
+          <button v-if="fixedQrCode && !paymentSuccess" class="btn btn-primary btn-sm" style="width:100%;margin-bottom:8px" @click="submitManualPayment" :disabled="submittingPayment">
+            {{ submittingPayment ? '提交中...' : '我已支付，通知管理员' }}
+          </button>
+          <p v-if="fixedQrCode" style="font-size:12px;color:var(--text-muted);margin-bottom:8px">付款后请点击上方按钮，管理员审核后到账</p>
         </div>
       </div>
     </div>
@@ -137,19 +140,24 @@ const quickPlans = [{cny:10},{cny:50},{cny:100},{cny:200},{cny:500},{cny:1000},{
 
 // Payment modal
 const showPayment = ref(false)
-const alipayQrCode = ref('')
-const alipayOrderNo = ref('')
+const fixedQrCode = ref('')
 const paymentLoading = ref(false)
 const paymentError = ref('')
-const checkingPayment = ref(false)
 const paymentSuccess = ref('')
+const submittingPayment = ref(false)
 const toppingUp = ref(false); const redeeming = ref(false)
 
 onMounted(async () => {
-  try { const d = await api.getDashboard(); totalCalls.value = d.today_calls || 0; totalCost.value = (d.today_cost_yuan || 0).toFixed(2) } catch(e){}
+  try { const d = await api.getDashboard(); totalCalls.value = d.total_calls || 0; totalCost.value = (d.total_cost_yuan || 0).toFixed(2) } catch(e){}
   try { const u = await api.getMe(); balance.value = ((u.balance || 0) / 100).toFixed(2) } catch(e){}
   loadRechargeHistory()
+  loadPaymentConfig()
 })
+
+async function loadPaymentConfig() {
+  try { const cfg = await api.getPaymentConfig(); cachedPaymentConfig.value = cfg } catch(e) { /* */ }
+}
+const cachedPaymentConfig = ref({})
 
 async function loadRechargeHistory() {
   try { const res = await api.getRechargeHistory(); rechargeHistory.value = res.items || []; totalRecharged.value = (rechargeHistory.value.filter(r=>r.status==='success').reduce((s,r)=>s+r.amount,0)/100).toFixed(2) } catch(e){}
@@ -157,59 +165,44 @@ async function loadRechargeHistory() {
 
 async function startPayment() {
   if (!customAmount.value) return
-  const amount = customAmount.value * pricePerUnit
   showPayment.value = true
-  alipayQrCode.value = ''
-  alipayOrderNo.value = ''
+  fixedQrCode.value = ''
   paymentError.value = ''
   paymentSuccess.value = ''
   paymentLoading.value = true
 
+  // Check for fixed QR code in payment config
+  const cfg = cachedPaymentConfig.value || {}
+  const qrUrl = payMethod.value === 'alipay' ? cfg.alipay_qr_url : cfg.wechat_qr_url
+  if (qrUrl) {
+    fixedQrCode.value = qrUrl
+    paymentLoading.value = false
+    return
+  }
+
+  // Fallback: try dynamic Alipay API
+  const amount = customAmount.value * pricePerUnit
   try {
     const res = await api.alipayRecharge(amount)
-    alipayQrCode.value = res.qr_code
-    alipayOrderNo.value = res.out_trade_no
-    // Start polling
-    pollAlipayStatus()
+    fixedQrCode.value = res.qr_code
   } catch(e) {
-    paymentError.value = '生成支付二维码失败: ' + (e.message || '请确认支付宝商户号已配置')
+    paymentError.value = '暂未配置收款码，请联系管理员'
   } finally {
     paymentLoading.value = false
   }
 }
 
-async function checkAlipayStatus() {
-  if (!alipayOrderNo.value) return
-  checkingPayment.value = true
+async function submitManualPayment() {
+  const amount = customAmount.value * pricePerUnit
+  submittingPayment.value = true
   try {
-    const res = await api.queryAlipayPayment(alipayOrderNo.value)
-    if (res.paid) {
-      paymentSuccess.value = '支付成功！余额已到账'
-      balance.value = res.balance_yuan.toFixed(2)
-      showPayment.value = false; customAmount.value = 1
-      loadRechargeHistory()
-    } else {
-      paymentError.value = '尚未收到支付通知，请确认已完成支付'
-    }
-  } catch(e) { paymentError.value = '查询失败: ' + e.message }
-  finally { checkingPayment.value = false }
-}
-
-let pollTimer = null
-function pollAlipayStatus() {
-  if (pollTimer) clearInterval(pollTimer)
-  pollTimer = setInterval(async () => {
-    if (!alipayOrderNo.value || !showPayment.value) { clearInterval(pollTimer); return }
-    try {
-      const res = await api.queryAlipayPayment(alipayOrderNo.value)
-      if (res.paid) {
-        clearInterval(pollTimer)
-        paymentSuccess.value = '支付成功！余额已到账'
-        balance.value = res.balance_yuan.toFixed(2)
-        setTimeout(() => { showPayment.value = false; customAmount.value = 1; loadRechargeHistory() }, 2000)
-      }
-    } catch(e) {}
-  }, 3000)
+    await api.recharge(amount, payMethod.value)
+    paymentSuccess.value = '已提交，等待管理员审核'
+    balance.value = ((cachedPaymentConfig.value?.balance || 0) / 100).toFixed(2)
+    setTimeout(() => { showPayment.value = false; customAmount.value = 1; loadRechargeHistory() }, 2000)
+  } catch(e) {
+    paymentError.value = '提交失败: ' + e.message
+  } finally { submittingPayment.value = false }
 }
 
 async function redeem() {

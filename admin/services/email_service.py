@@ -17,7 +17,7 @@ async def send_verification_email(to_email: str, code: str):
         return
 
     msg = MIMEText(body, "plain", "utf-8")
-    msg["Subject"] = "LLM Gateway 邮箱验证码"
+    msg["Subject"] = "EasyCode 邮箱验证码"
     msg["From"] = SMTP_FROM
     msg["To"] = to_email
 

@@ -46,7 +46,10 @@
 
       <!-- Toolbar -->
       <div class="flex-between mb-16" style="margin-top:16px">
-        <input v-model="searchQuery" class="form-input" placeholder="搜索模型名称..." style="width:260px;padding:7px 12px;font-size:13px" />
+        <div style="display:flex;align-items:center;gap:12px;flex:1">
+          <input v-model="searchQuery" class="form-input" placeholder="搜索模型名称..." style="width:260px;padding:7px 12px;font-size:13px" />
+          <span class="text-muted" style="font-size:11px;display:flex;align-items:center;gap:4px">&#x2139;&#xFE0F; {{ t('clickToCopyHint') }}</span>
+        </div>
         <div style="display:flex;gap:6px">
           <button class="btn btn-outline btn-sm" @click="showPrice = !showPrice">{{ showPrice ? '隐藏' : '显示' }}价格</button>
           <button class="btn btn-outline btn-sm" @click="showDesc = !showDesc">{{ showDesc ? '隐藏' : '显示' }}描述</button>
@@ -60,8 +63,9 @@
         <div v-if="viewGrid" class="model-grid">
           <div v-for="m in filteredModels" :key="m.id" class="model-card card card-padded">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-              <span v-if="m.icon" class="provider-dot" :style="{ background: iconColor(m.provider) }"></span>
-              <span style="font-weight:700;font-size:14px">{{ modelDisplayName(m.id) }}</span>
+              <span v-if="m.icon" class="provider-dot" :style="{ background: modelColor(m.id) }"></span>
+              <span style="font-weight:700;font-size:14px;cursor:pointer;color:var(--primary);user-select:all" @click="copyModelId(m.id)" :title="t('clickToCopy')">{{ modelDisplayName(m.id) }}</span>
+              <span style="font-size:10px;color:var(--text-muted);margin-left:auto;user-select:all">modelname: <span style="font-family:monospace;font-size:11px;color:var(--text-secondary)">{{ m.id }}</span></span>
             </div>
             <div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px">{{ providerName(m.provider) }}</div>
 
@@ -110,7 +114,10 @@
             </thead>
             <tbody>
               <tr v-for="m in filteredModels" :key="m.id">
-                <td style="font-weight:600">{{ modelDisplayName(m.id) }}</td>
+                <td>
+                  <div style="font-weight:600;cursor:pointer;color:var(--primary)" @click="copyModelId(m.id)">{{ modelDisplayName(m.id) }}</div>
+                  <div style="font-size:10px;color:var(--text-muted);user-select:all">modelname: <span style="font-family:monospace;color:var(--text-secondary)">{{ m.id }}</span></div>
+                </td>
                 <td>{{ providerName(m.provider) }}</td>
                 <td v-if="m.per_use === 0">&yen;{{ m.input_fmt }}/1M</td>
                 <td v-else style="color:#d97706">&yen;{{ m.per_use_fmt }}/次</td>
@@ -131,6 +138,11 @@
           <div class="empty-state-sub">{{ t('adjustFilterHint') }}</div>
         </div>
       </div>
+    </div>
+
+    <!-- Toast -->
+    <div v-if="toastMsg" style="position:fixed;bottom:40px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 24px;border-radius:8px;font-size:13px;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.2);transition:opacity 0.3s">
+      {{ toastMsg }}
     </div>
   </div>
 </template>
@@ -157,49 +169,45 @@ const billOptions = ['', '按量计费', '按次计费']
 const tagOptions = ref([''])
 
 const MODEL_DISPLAY = {
-  'gpt-4o': 'GPT-4o', 'gpt-4o-mini': 'GPT-4o Mini', 'gpt-4.1': 'GPT-4.1',
-  'gpt-4': 'GPT-4', 'gpt-4-turbo': 'GPT-4 Turbo', 'gpt-3.5-turbo': 'GPT-3.5 Turbo',
-  'o1': 'o1', 'o3': 'o3', 'o3-mini': 'o3 Mini',
-  'claude-3-opus': 'Claude 3 Opus', 'claude-3-sonnet': 'Claude 3 Sonnet',
-  'claude-sonnet-4-20250514': 'Claude Sonnet 4', 'claude-3-5-haiku-20241022': 'Claude 3.5 Haiku',
-  'gemini-pro': 'Gemini Pro', 'gemini-2.5-flash': 'Gemini 2.5 Flash', 'gemini-2.5-pro': 'Gemini 2.5 Pro',
-  'deepseek-v3.2': 'DeepSeek V3.2', 'deepseek-v4-flash': 'DeepSeek V4 Flash', 'deepseek-v4-pro': 'DeepSeek V4 Pro',
-  'qwen-turbo': 'Qwen Turbo', 'qwen-plus': 'Qwen Plus', 'qwen-max': 'Qwen Max', 'qwen3.6-plus': 'Qwen 3.6 Plus',
-  'glm-4.7': 'GLM 4.7', 'glm-5': 'GLM 5', 'glm-5.1': 'GLM 5.1',
-  'kimi-k2.5': 'Kimi K2.5', 'kimi-k2.6': 'Kimi K2.6',
-  'MiniMax-M2.5': 'MiniMax M2.5',
-  'doubao-seedance-2-0-260128': 'Doubao Seedance 2.0', 'doubao-seedance-2-0-fast-260128': 'Doubao Seedance 2.0 Fast',
-  'kling-v1': 'Kling V1', 'kling-v1-5': 'Kling V1.5', 'kling-v1-6': 'Kling V1.6',
-  'kling-v2-1': 'Kling V2.1', 'kling-v2-1-master': 'Kling V2.1 Master', 'kling-v2-master': 'Kling V2 Master',
-  'kling-v2-5-turbo': 'Kling V2.5 Turbo', 'kling-v2-6': 'Kling V2.6',
-  'kling-v3': 'Kling V3', 'kling-v3-omni': 'Kling V3 Omni', 'kling-video-o1': 'Kling Video O1',
+  'deepseek-v4-flash': 'DeepSeek V4 Flash', 'deepseek-v4-pro': 'DeepSeek V4 Pro',
+}
+function copyModelId(id) {
+  const el = document.createElement('textarea')
+  el.value = id
+  el.style.position = 'fixed'
+  el.style.left = '-9999px'
+  el.style.top = '-9999px'
+  el.readOnly = true
+  document.body.appendChild(el)
+  el.select()
+  el.setSelectionRange(0, el.value.length)
+  document.execCommand('copy')
+  document.body.removeChild(el)
+  showToast(t('copyModelSuccess'))
+}
+
+const toastMsg = ref('')
+let toastTimer = null
+function showToast(msg) {
+  toastMsg.value = msg
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => { toastMsg.value = '' }, 2000)
 }
 function modelDisplayName(id) {
   return MODEL_DISPLAY[id] || id.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ')
 }
 
 const PROVIDER_NAMES = {
-  openai: 'OpenAI',
-  anthropic: 'Anthropic Claude',
-  google: 'Google Gemini',
   deepseek: 'DeepSeek',
-  qwen: '阿里巴巴 / 通义千问',
-  zhipu: '智谱 AI',
-  moonshot: 'Moonshot / Kimi',
-  doubao: '字节跳动 / 豆包',
-  minimax: 'MiniMax',
-  kling: '快手可灵 Kling',
 }
 
-const PROVIDER_COLORS = {
-  openai: '#10a37f', anthropic: '#d97757', google: '#1c69ff',
-  deepseek: '#4f46e5', qwen: '#615ced', zhipu: '#1677ff',
-  moonshot: '#8b5cf6', doubao: '#f59e0b', minimax: '#ef4444',
-  kling: '#ec4899',
+const MODEL_COLORS = {
+  'deepseek-v4-flash': '#4f46e5',
+  'deepseek-v4-pro': '#7c3aed',
 }
 
 function providerName(key) { return PROVIDER_NAMES[key] || key }
-function iconColor(key) { return PROVIDER_COLORS[key] || '#999' }
+function modelColor(id) { return MODEL_COLORS[id] || '#4f46e5' }
 
 const filteredModels = computed(() => {
   let list = models.value
@@ -253,7 +261,7 @@ onMounted(async () => {
       per_use_fmt: (m.per_use).toFixed(2),
       tags: m.tags || '',
       description: m.description || '',
-      icon: PROVIDER_COLORS[m.provider] ? true : false,
+      icon: MODEL_COLORS[m.model] ? true : false,
       per_use: m.per_use || 0,
     }))
   } catch (e) {

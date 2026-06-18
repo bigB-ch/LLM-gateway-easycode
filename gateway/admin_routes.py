@@ -133,7 +133,6 @@ async def check_balance(provider: str, _admin: dict = Depends(require_admin)):
 # ── Model Catalog ──
 
 _MODEL_META = {
-    "deepseek-v3.2": {"tags": "Reasoning,Tools,Open Weights,128K", "desc": "DeepSeek-V3.2 introduces DeepSeek Sparse Attention, first model to integrate thinking into tool use."},
     "deepseek-v4-flash": {"tags": "Open Weights", "desc": "Efficient lightweight MoE model, 284B total/13B active params, native 1M+ context. Fast inference, low cost."},
     "deepseek-v4-pro": {"tags": "Open Weights", "desc": "Flagship MoE model, 1.6T total/49B active params, native 1M+ context. Top math, coding, reasoning."},
     "qwen-plus": {"tags": "text", "desc": "Qwen3 Plus model, merges thinking and non-thinking modes, reasoning surpasses QwQ."},
@@ -154,6 +153,7 @@ _MODEL_META = {
     "kling-v2-6": {"tags": "text2video,img2video", "desc": "Kling v2.6 supports text/image-to-video with synchronized audio generation."},
     "kling-v3": {"tags": "text2video,img2video", "desc": "Kling 3.0 AI professional video production system, supports native 2K/4K output, Canvas Agent."},
     "kling-v3-omni": {"tags": "text2video,img2video", "desc": "Kling 3.0 Omni multimodal video generation model."},
+    "xunfei-qwen": {"tags": "text", "desc": "Xunfei MaaS Qwen model, hosted on iFlytek cloud."},
 }
 
 @router.get("/models")
@@ -208,6 +208,15 @@ async def reset_circuit_breaker(provider: str, _admin: dict = Depends(require_ad
 
 @router.post("/chat")
 async def admin_chat(body: AdminChatRequest, _user: dict = Depends(get_current_user)):
+    # Rate limit: max 20 Playground calls per user per hour
+    user_id = _user.get("user_id", "")
+    rate_key = f"playground_rate:{user_id}"
+    count = await redis.incr(rate_key)
+    if count == 1:
+        await redis.expire(rate_key, 3600)
+    if count > 20:
+        raise HTTPException(status_code=429, detail={"error": "playground_limit", "message": "每小时最多 20 次试用，请创建 API Key 正式调用"})
+
     adapters = get_adapters()
     adapter = find_adapter(body.model, adapters)
     if adapter is None:

@@ -10,7 +10,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from adapters import create_adapters
 from routes import router as gateway_router, set_adapters
 from redis_client import redis
-from middleware.logging import setup_logging, RequestIDMiddleware
+from middleware.logging import setup_logging, request_id_middleware
 
 logger = setup_logging("gateway")
 
@@ -61,8 +61,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="LLM Gateway", lifespan=lifespan)
 
-# Request ID middleware
-app.add_middleware(RequestIDMiddleware)
+# Request ID middleware (uses @app.middleware("http") for streaming safety)
+request_id_middleware(app)
 
 _cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
 app.add_middleware(

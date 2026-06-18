@@ -136,8 +136,7 @@ async def anthropic_messages(request: Request):
                 from httpx import AsyncClient
                 anthro_base = adapter.base_url.rstrip("/").replace("/v1", "/anthropic/v1") + "/messages"
 
-                # Use original messages directly to preserve tool_use/tool_result/thinking blocks
-                ds_messages = [m for m in messages_raw if m.get("role") != "system"]
+                ds_messages = [{"role": m.role, "content": m.content} for m in unified.messages if m.role != "system"]
                 ds_body = {
                     "model": _base_model,
                     "messages": ds_messages,
@@ -148,64 +147,35 @@ async def anthropic_messages(request: Request):
                     if isinstance(system, str):
                         ds_body["system"] = system
                     elif isinstance(system, list):
-                        ds_body["system"] = "\n".join(b.get("text", "") for b in system if b.get("type") == "text")
+                        ds_body["system"] = "
+".join(b.get("text", "") for b in system if b.get("type") == "text")
                 if unified.temperature is not None:
                     ds_body["temperature"] = unified.temperature
-                # Forward optional fields from original request
-                for field in ("thinking", "tools", "tool_choice", "top_p", "top_k", "stop_sequences", "metadata"):
-                    if body.get(field) is not None:
-                        ds_body[field] = body[field]
 
                 ds_headers = {
                     "x-api-key": adapter.api_key,
                     "anthropic-version": "2023-06-01",
                     "Content-Type": "application/json",
-                    "Accept-Encoding": "identity",
                 }
-                # Forward anthropic-beta header from original request
-                beta = request.headers.get("anthropic-beta")
-                if beta:
-                    ds_headers["anthropic-beta"] = beta
 
                 try:
                     async with AsyncClient(timeout=120.0) as client:
                         async with client.stream("POST", anthro_base, json=ds_body, headers=ds_headers) as resp:
                             resp.raise_for_status()
-                            event_buf = []
                             async for line in resp.aiter_lines():
-                                # Intercept message_start to restore original model name
-                                if line.startswith("data: ") and '"message_start"' in line:
+                                yield line + "
+"
+                                if line.startswith("data: "):
                                     try:
                                         ev = __import__('json').loads(line[6:])
                                         if ev.get("type") == "message_start":
-                                            msg = ev.get("message", {})
-                                            if msg.get("model") and _base_model:
-                                                msg["model"] = _base_model
-                                            line = "data: " + __import__('json').dumps(ev, ensure_ascii=False)
+                                            u = ev.get("message", {}).get("usage", {})
+                                            prompt_tokens = u.get("input_tokens", 0)
+                                        elif ev.get("type") == "message_delta":
+                                            u = ev.get("usage", {})
+                                            completion_tokens = u.get("output_tokens", 0)
                                     except Exception:
                                         pass
-
-                                if line == "":
-                                    # Empty line = end of SSE event, yield complete event at once
-                                    if event_buf:
-                                        yield "\n".join(event_buf) + "\n\n"
-                                        event_buf = []
-                                else:
-                                    event_buf.append(line)
-                                    if line.startswith("data: "):
-                                        try:
-                                            ev = __import__('json').loads(line[6:])
-                                            if ev.get("type") == "message_start":
-                                                u = ev.get("message", {}).get("usage", {})
-                                                prompt_tokens = u.get("input_tokens", 0)
-                                            elif ev.get("type") == "message_delta":
-                                                u = ev.get("usage", {})
-                                                completion_tokens = u.get("output_tokens", 0)
-                                        except Exception:
-                                            pass
-                            # Flush remaining buffer
-                            if event_buf:
-                                yield "\n".join(event_buf) + "\n\n"
                 except Exception as e:
                     stream_error = str(e)
 

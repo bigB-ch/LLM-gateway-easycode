@@ -33,8 +33,8 @@ async def batch_insert(messages: list[tuple[str, dict]]) -> list[str]:
         idx = i
         values_clauses.append(
             f"(:rid_{idx}, :uid_{idx}, :prefix_{idx}, :model_{idx}, :provider_{idx}, "
-            f":pt_{idx}, :ct_{idx}, :cost_{idx}, :bcost_{idx}, :lat_{idx}, :status_{idx}, :err_{idx}) "
-            f"ON CONFLICT (request_id) DO NOTHING"
+            f":pt_{idx}, :ct_{idx}, :cost_{idx}, :bcost_{idx}, :lat_{idx}, :status_{idx}, :err_{idx}, :ip_{idx}, NOW()) "
+            ""
         )
         params.update({
             f"rid_{idx}": data.get("request_id", ""),
@@ -49,18 +49,19 @@ async def batch_insert(messages: list[tuple[str, dict]]) -> list[str]:
             f"lat_{idx}": int(data.get("latency_ms", 0)),
             f"status_{idx}": data.get("status", "error"),
             f"err_{idx}": data.get("error_msg", ""),
+            f"ip_{idx}": data.get("ip", ""),
         })
 
     sql = (
         "INSERT INTO usage_logs "
-        "(request_id, user_id, api_key_prefix, model, provider, prompt_tokens, completion_tokens, cost, bill_cost, latency_ms, status, error_msg) "
-        "VALUES " + ", ".join(values_clauses)
+        "(request_id, user_id, api_key_prefix, model, provider, prompt_tokens, completion_tokens, cost, bill_cost, latency_ms, status, error_msg, ip, created_at) "
+        "VALUES " + ", ".join(values_clauses) + " ON CONFLICT (request_id) DO NOTHING"
     )
 
     async with engine.begin() as conn:
-        await conn.execute(text(sql), params)
+        result = await conn.execute(text(sql), params)
+        inserted = result.rowcount
 
-        # Deduct from user plans first, then balance
         for i, (msg_id, data) in enumerate(messages):
             if data.get("status") != "success":
                 continue
@@ -69,18 +70,9 @@ async def batch_insert(messages: list[tuple[str, dict]]) -> list[str]:
             if not user_id or bill_cost <= 0:
                 continue
 
-            # Lock user row for atomic deduction
-            user_result = await conn.execute(
-                text("SELECT id, balance FROM users WHERE id = :uid FOR UPDATE"),
-                {"uid": user_id},
-            )
-            user_row = user_result.fetchone()
-            if not user_row:
-                continue
-            user_balance = user_row[1]
             remaining = bill_cost
 
-            # Try deducting from active plans first
+            # Deduct from plans first
             plan_result = await conn.execute(
                 text(
                     "SELECT id, token_remaining FROM user_plans "
@@ -92,7 +84,8 @@ async def batch_insert(messages: list[tuple[str, dict]]) -> list[str]:
             for plan_row in plan_result:
                 if remaining <= 0:
                     break
-                plan_id, plan_tokens = plan_row[0], plan_row[1]
+                plan_id = plan_row[0]
+                plan_tokens = plan_row[1]
                 deduct = min(remaining, plan_tokens)
                 await conn.execute(
                     text("UPDATE user_plans SET token_remaining = token_remaining - :d WHERE id = :pid"),
@@ -100,21 +93,34 @@ async def batch_insert(messages: list[tuple[str, dict]]) -> list[str]:
                 )
                 remaining -= deduct
 
-            # Deduct remainder from balance
             if remaining > 0:
-                if user_balance < remaining:
-                    remaining = user_balance  # Can't go negative
-                await conn.execute(
-                    text("UPDATE users SET balance = balance - :d WHERE id = :uid"),
-                    {"d": remaining, "uid": user_id},
-                )
-                # Sync balance cache to Redis
                 try:
-                    new_balance = user_balance - remaining
                     r = redis_client.redis
-                    await r.set(f"user_balance:{user_id}", str(new_balance), ex=3600)
+                    await r.set(f"user_has_plans:{user_id}", "0", ex=86400)
                 except Exception:
                     pass
+
+            if remaining > 0:
+                user_result = await conn.execute(
+                    text("SELECT balance FROM users WHERE id = :uid FOR UPDATE"),
+                    {"uid": user_id},
+                )
+                user_row = user_result.fetchone()
+                if user_row:
+                    user_balance = user_row[0]
+                    if user_balance < remaining:
+                        remaining = user_balance
+                    if remaining > 0:
+                        await conn.execute(
+                            text("UPDATE users SET balance = balance - :d WHERE id = :uid"),
+                            {"d": remaining, "uid": user_id},
+                        )
+                        try:
+                            new_balance = user_balance - remaining
+                            r = redis_client.redis
+                            await r.set(f"user_balance:{user_id}", str(new_balance), ex=3600)
+                        except Exception:
+                            pass
 
     return msg_ids
 
@@ -149,7 +155,7 @@ async def run_consumer():
                                 await r.hset(f"dlq_retry:{eid}", "count", str(retries))
 
             pending_info = await r.xpending(STREAM_KEY, GROUP_NAME)
-            if pending_info and pending_info.get("pending", 0) > 100:
+            if pending_info and pending_info.get("pending", 0) > 10:
                 pending_msgs = await r.xpending_range(
                     STREAM_KEY, GROUP_NAME, min="-", max="+", count=50,
                 )
@@ -157,7 +163,7 @@ async def run_consumer():
                     msg = await r.xrange(STREAM_KEY, entry["message_id"], entry["message_id"])
                     if msg:
                         eid, data = msg[0]
-                        parsed = json.loads(data)
+                        parsed = data
                         acked = await batch_insert([(eid, parsed)])
                         for eid2 in acked:
                             await r.xack(STREAM_KEY, GROUP_NAME, eid2)

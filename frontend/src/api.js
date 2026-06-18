@@ -73,6 +73,10 @@ export const api = {
 
   revokeKey: (id) => request(`/keys/${id}/revoke`, { method: 'POST' }),
 
+  revealKey: (id) => request(`/keys/${id}/reveal`, { method: 'POST' }),
+
+  deleteKey: (id) => request(`/keys/${id}`, { method: 'DELETE' }),
+
   getPlans: () => request('/plans'),
 
   purchasePlan: (planId) => request(`/plans/${planId}/purchase`, { method: 'POST' }),
@@ -106,6 +110,18 @@ export const api = {
 
   getAllUsage: (page = 1, pageSize = 20) =>
     request(`/reports/all-usage?page=${page}&page_size=${pageSize}`),
+
+  getAdminTrend: (days = 7) => request(`/reports/admin-trend?days=${days}`),
+
+  getAdminDaily: (page = 1, pageSize = 14) =>
+    request(`/reports/admin-daily?page=${page}&page_size=${pageSize}`),
+
+  getUserDaily: (page = 1, pageSize = 20, dateFrom, dateTo) => {
+    const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) })
+    if (dateFrom) params.set('date_from', dateFrom)
+    if (dateTo) params.set('date_to', dateTo)
+    return request(`/reports/user-daily?${params}`)
+  },
 
   getAnnouncements: () => request('/system/announcements'),
 

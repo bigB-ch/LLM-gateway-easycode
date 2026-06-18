@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
 from models.usage_log import UsageLog
 from models.user import User
+from models.api_key import ApiKey
 from dependencies import get_current_user, require_admin
 
 router = APIRouter(prefix="/admin/api/reports", tags=["reports"])
@@ -58,6 +59,14 @@ async def dashboard(user: dict = Depends(get_current_user), db: AsyncSession = D
     )
     total_cost = total_cost_result.scalar() or 0
 
+    key_count_result = await db.execute(
+        select(func.count(ApiKey.id)).where(
+            ApiKey.user_id == user["user_id"],
+            ApiKey.status == "active",
+        )
+    )
+    key_count = key_count_result.scalar() or 0
+
     return {
         "today_calls": today_calls,
         "today_cost_yuan": round(today_cost / 100, 2),
@@ -65,6 +74,7 @@ async def dashboard(user: dict = Depends(get_current_user), db: AsyncSession = D
         "total_calls": total_calls,
         "total_tokens": total_tokens,
         "total_cost_yuan": round(total_cost / 100, 2),
+        "key_count": key_count,
     }
 
 
@@ -143,6 +153,139 @@ async def admin_dashboard(
     }
 
 
+@router.get("/admin-trend")
+async def admin_trend(
+    days: int = Query(7, le=30),
+    _admin: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    now = datetime.now(timezone.utc)
+    start = now - timedelta(days=days)
+
+    result = await db.execute(
+        select(
+            func.date(UsageLog.created_at).label("day"),
+            func.count(UsageLog.id).label("calls"),
+            func.coalesce(func.sum(UsageLog.prompt_tokens + UsageLog.completion_tokens), 0).label("tokens"),
+            func.coalesce(func.sum(UsageLog.bill_cost), 0).label("total"),
+        )
+        .where(UsageLog.created_at >= start, UsageLog.status == "success")
+        .group_by(text("day"))
+        .order_by(text("day"))
+    )
+    return {
+        "trend": [
+            {"date": str(row.day), "calls": row.calls, "tokens": row.tokens, "cost_yuan": round(row.total / 100, 2)}
+            for row in result
+        ]
+    }
+
+
+@router.get("/admin-daily")
+async def admin_daily(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(14, le=90),
+    _admin: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Daily summary with pagination."""
+    base = select(
+        func.date(UsageLog.created_at).label("day"),
+        func.count(UsageLog.id).label("calls"),
+        func.count(UsageLog.id).filter(UsageLog.status == "success").label("success_calls"),
+        func.coalesce(func.sum(UsageLog.prompt_tokens), 0).label("prompt_tokens"),
+        func.coalesce(func.sum(UsageLog.completion_tokens), 0).label("completion_tokens"),
+        func.coalesce(func.sum(UsageLog.bill_cost), 0).label("cost"),
+    )
+    count_q = select(func.count()).select_from(
+        base.group_by(text("day")).subquery()
+    )
+    total = (await db.execute(count_q)).scalar() or 0
+
+    offset = (page - 1) * page_size
+    result = await db.execute(
+        base.group_by(text("day")).order_by(text("day DESC")).limit(page_size).offset(offset)
+    )
+    return {
+        "items": [
+            {"date": str(r.day), "calls": r.calls, "success": r.success_calls,
+             "prompt_tokens": r.prompt_tokens, "completion_tokens": r.completion_tokens,
+             "cost_yuan": round(r.cost / 100, 2)}
+            for r in result
+        ],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+    }
+
+
+@router.get("/user-daily")
+async def admin_user_daily(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, le=100),
+    date_from: str | None = Query(None),
+    date_to: str | None = Query(None),
+    _admin: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Daily usage grouped by user, with pagination."""
+    from sqlalchemy import Date, cast
+
+    conditions = []
+    if date_from:
+        conditions.append(UsageLog.created_at >= datetime.fromisoformat(date_from))
+    if date_to:
+        conditions.append(UsageLog.created_at <= datetime.fromisoformat(date_to))
+
+    base = select(
+        cast(UsageLog.created_at, Date).label("date"),
+        UsageLog.user_id,
+        User.username,
+        User.email,
+        UsageLog.model,
+        func.count(UsageLog.id).label("calls"),
+        func.count(UsageLog.id).filter(UsageLog.status == "success").label("success_calls"),
+        func.coalesce(func.sum(UsageLog.prompt_tokens), 0).label("prompt_tokens"),
+        func.coalesce(func.sum(UsageLog.completion_tokens), 0).label("completion_tokens"),
+        func.coalesce(func.sum(UsageLog.bill_cost), 0).label("cost"),
+    ).join(User, UsageLog.user_id == User.id).where(*conditions)
+
+    order = text("date DESC, user_id, model")
+
+    count_q = select(func.count()).select_from(
+        base.group_by(text("date"), UsageLog.user_id, User.username, User.email, UsageLog.model).subquery()
+    )
+    total = (await db.execute(count_q)).scalar() or 0
+
+    offset = (page - 1) * page_size
+    result = await db.execute(
+        base.group_by(text("date"), UsageLog.user_id, User.username, User.email, UsageLog.model)
+        .order_by(order)
+        .limit(page_size)
+        .offset(offset)
+    )
+    return {
+        "items": [
+            {
+                "date": str(r.date),
+                "user_id": str(r.user_id),
+                "username": r.username,
+                "email": r.email,
+                "model": r.model,
+                "calls": r.calls,
+                "success": r.success_calls,
+                "prompt_tokens": r.prompt_tokens,
+                "completion_tokens": r.completion_tokens,
+                "cost_yuan": round(r.cost / 100, 2),
+            }
+            for r in result
+        ],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+    }
+
+
 @router.get("/trend")
 async def trend(
     days: int = Query(7, le=30),
@@ -162,11 +305,27 @@ async def trend(
         .order_by(text("day"))
     )
     rows = result.all()
+    # Also get call counts and token counts per day
+    detail_result = await db.execute(
+        select(
+            func.date(UsageLog.created_at).label("day"),
+            func.count(UsageLog.id).label("calls"),
+            func.coalesce(func.sum(UsageLog.prompt_tokens + UsageLog.completion_tokens), 0).label("tokens"),
+            func.coalesce(func.sum(UsageLog.bill_cost), 0).label("total"),
+        )
+        .where(UsageLog.user_id == user["user_id"], UsageLog.created_at >= start, UsageLog.status == "success")
+        .group_by(text("day"))
+        .order_by(text("day"))
+    )
     return {
         "trend": [
             {"date": str(row.day), "cost_yuan": round(row.total / 100, 2)}
             for row in rows
-        ]
+        ],
+        "details": [
+            {"date": str(r.day), "calls": r.calls, "tokens": r.tokens, "cost_yuan": round(r.total / 100, 2)}
+            for r in detail_result
+        ],
     }
 
 
@@ -191,6 +350,13 @@ async def usage_details(
     count_q = select(func.count()).select_from(base_query.subquery())
     total_result = await db.execute(count_q)
     total = total_result.scalar() or 0
+
+    # Total cost for filtered period (successful calls only)
+    cost_q = select(func.coalesce(func.sum(UsageLog.bill_cost), 0)).where(
+        *conditions, UsageLog.status == "success"
+    )
+    total_cost_result = await db.execute(cost_q)
+    total_cost_fen = total_cost_result.scalar() or 0
 
     result = await db.execute(
         base_query.order_by(UsageLog.created_at.desc())
@@ -218,6 +384,7 @@ async def usage_details(
         "total": total,
         "page": page,
         "page_size": page_size,
+        "total_cost_yuan": round(total_cost_fen / 100, 2),
     }
 
 

@@ -1,17 +1,34 @@
 import hashlib
 import secrets
 import bcrypt
+from cryptography.fernet import Fernet
+import base64
+from config import JWT_SECRET
+
+
+def _get_fernet() -> Fernet:
+    key = base64.urlsafe_b64encode(hashlib.sha256(JWT_SECRET.encode()).digest())
+    return Fernet(key)
 
 
 def hash_api_key(key: str) -> str:
     return hashlib.sha256(key.encode()).hexdigest()
 
 
-def generate_api_key() -> tuple[str, str, str]:
+def encrypt_api_key(raw: str) -> str:
+    return _get_fernet().encrypt(raw.encode()).decode()
+
+
+def decrypt_api_key(encrypted: str) -> str:
+    return _get_fernet().decrypt(encrypted.encode()).decode()
+
+
+def generate_api_key() -> tuple[str, str, str, str]:
     raw = "sk-" + secrets.token_hex(32)
     prefix = raw[:10]
     hashed = hash_api_key(raw)
-    return raw, prefix, hashed
+    encrypted = encrypt_api_key(raw)
+    return raw, prefix, hashed, encrypted
 
 
 def hash_password(password: str) -> str:

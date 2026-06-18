@@ -20,10 +20,6 @@
       <button class="topbar-icon-btn" title="切换主题" @click="toggleTheme">
         {{ isDark ? '&#x263E;' : '&#x2600;' }}
       </button>
-      <button class="topbar-icon-btn" :title="t('language')" @click="handleToggleLang">
-        {{ locale === 'zh' ? '中' : 'EN' }}
-      </button>
-
       <div class="topbar-avatar" @click.stop="menuOpen = !menuOpen">
         <div class="avatar-circle">{{ avatarChar }}</div>
         <span class="avatar-name">{{ userName }}</span>
@@ -64,7 +60,7 @@ import { api, isAdmin } from '../api'
 import { useI18n } from '../i18n'
 import LogoIcon from './LogoIcon.vue'
 
-const { t, locale, toggleLang } = useI18n()
+const { t } = useI18n()
 
 const router = useRouter()
 const route = useRoute()
@@ -133,10 +129,6 @@ function toggleTheme() {
   document.documentElement.classList.toggle('dark', isDark.value)
   localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
 }
-function handleToggleLang() {
-  toggleLang()
-}
-
 // Init theme from localStorage
 const savedTheme = localStorage.getItem('theme')
 if (savedTheme === 'dark') {

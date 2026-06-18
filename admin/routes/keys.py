@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Request
 from pydantic import BaseModel
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -48,7 +48,7 @@ async def create_key(req: CreateKeyRequest, user: dict = Depends(get_current_use
     r = redis_client.redis
     rate_key = f"key_create_rate:{user['user_id']}"
     count = await r.get(rate_key)
-    if count and int(count) >= 5:
+    if count and int(count) >= 20:
         raise HTTPException(status_code=429, detail={"error": "too_many_keys_per_hour"})
     await r.incr(rate_key)
     if not count:
@@ -57,7 +57,7 @@ async def create_key(req: CreateKeyRequest, user: dict = Depends(get_current_use
     active_count = await db.execute(
         select(func.count(ApiKey.id)).where(ApiKey.user_id == user["user_id"], ApiKey.status == "active")
     )
-    if active_count.scalar() >= 5:
+    if active_count.scalar() >= 20:
         raise HTTPException(status_code=400, detail={"error": "max_active_keys"})
 
     expire_days = req.expire_days or 90
@@ -65,13 +65,14 @@ async def create_key(req: CreateKeyRequest, user: dict = Depends(get_current_use
 
     created_keys = []
     for _ in range(min(req.count, 10)):
-        raw_key, prefix, hashed = generate_api_key()
+        raw_key, prefix, hashed, encrypted = generate_api_key()
 
         api_key = ApiKey(
             id=uuid.uuid4(),
             user_id=user["user_id"],
             key_hash=hashed,
             key_prefix=prefix,
+            encrypted_key=encrypted,
             name=req.name,
             rate_limit=req.rate_limit,
             token_group=req.token_group or "default",
@@ -87,6 +88,7 @@ async def create_key(req: CreateKeyRequest, user: dict = Depends(get_current_use
             "rate_limit": str(req.rate_limit),
             "status": "active",
             "model_allowlist": req.model_allowlist or "",
+            "key_prefix": prefix,
         })
 
         audit = AuditLog(
@@ -127,3 +129,57 @@ async def revoke_key(key_id: str, user: dict = Depends(get_current_user), db: As
     await r.delete(f"apikey:{key.key_hash}")
     await db.commit()
     return {"message": "key_revoked"}
+
+
+@router.delete("/{key_id}")
+async def delete_key(key_id: str, user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(ApiKey).where(ApiKey.id == key_id, ApiKey.user_id == user["user_id"]))
+    key = result.scalar_one_or_none()
+    if key is None:
+        raise HTTPException(status_code=404, detail={"error": "key_not_found"})
+    if key.status != "revoked":
+        raise HTTPException(status_code=400, detail={"error": "must_revoke_first"})
+
+    r = redis_client.redis
+    await r.delete(f"apikey:{key.key_hash}")
+    await db.delete(key)
+    await db.commit()
+    return {"message": "key_deleted"}
+
+
+@router.post("/{key_id}/reveal")
+async def reveal_key(key_id: str, user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(ApiKey).where(ApiKey.id == key_id, ApiKey.user_id == user["user_id"]))
+    key = result.scalar_one_or_none()
+    if key is None:
+        raise HTTPException(status_code=404, detail={"error": "key_not_found"})
+    if key.status != "active":
+        raise HTTPException(status_code=400, detail={"error": "key_not_active"})
+    if not key.encrypted_key:
+        raise HTTPException(status_code=400, detail={"error": "not_available"})
+
+    from crypto import decrypt_api_key
+    raw = decrypt_api_key(key.encrypted_key)
+    return {"api_key": raw, "key_prefix": key.key_prefix}
+
+
+@router.get("/internal/lookup/{key_hash}")
+async def lookup_key_internal(
+    key_hash: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Internal endpoint for gateway to look up API key data. No admin auth required."""
+    if request.headers.get("X-Internal-Auth") != "llm-gateway-internal":
+        raise HTTPException(status_code=403)
+    result = await db.execute(select(ApiKey).where(ApiKey.key_hash == key_hash))
+    key = result.scalar_one_or_none()
+    if key is None or key.status != "active":
+        raise HTTPException(status_code=404)
+    return {
+        "user_id": str(key.user_id),
+        "rate_limit": key.rate_limit,
+        "status": key.status,
+        "model_allowlist": key.model_allowlist or "",
+        "key_prefix": key.key_prefix,
+    }

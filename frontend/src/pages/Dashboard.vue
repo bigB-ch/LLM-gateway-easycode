@@ -62,6 +62,7 @@ import { api } from '../api'
 import { useI18n } from '../i18n'
 const { t } = useI18n()
 const userName = ref(''); const dash = ref({}); const trendData = ref([])
+const dayDetails = ref([])
 const announcements = ref([]); const faqs = ref([])
 const maxCost = computed(() => Math.max(...trendData.value.map(d => d.cost_yuan || 0), 1))
 function x(i) { return 40 + (i / Math.max(trendData.value.length - 1, 1)) * 520 }
@@ -71,7 +72,7 @@ const chartArea = computed(() => `${x(0)},170 ` + trendData.value.map((d, i) => 
 onMounted(async () => {
   try { const u = await api.getMe(); userName.value = u.username || u.email || '' } catch(e){}
   try { const d = await api.getDashboard(); dash.value = { ...dash.value, ...d } } catch(e){}
-  try { const tr = await api.getTrend(7); trendData.value = tr.trend || [] } catch(e){}
+  try { const tr = await api.getTrend(7); trendData.value = tr.trend || []; dayDetails.value = tr.details || [] } catch(e){}
   try { const a = await api.getAnnouncements(); announcements.value = (a.items||[]).map(x=>({...x,open:false})) } catch(e){}
   try { const f = await api.getFAQ(); faqs.value = (f.items||[]).map(x=>({...x,open:false})) } catch(e){}
 })

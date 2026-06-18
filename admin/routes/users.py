@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -72,6 +72,22 @@ async def get_user(
     return _user_to_response(u)
 
 
+@router.get("/internal/balance/{user_id}")
+async def get_user_balance_internal(
+    user_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Internal endpoint for gateway to fetch user balance. No admin auth required."""
+    if request.headers.get("X-Internal-Auth") != "llm-gateway-internal":
+        raise HTTPException(status_code=403)
+    result = await db.execute(select(User).where(User.id == user_id))
+    u = result.scalar_one_or_none()
+    if u is None:
+        raise HTTPException(status_code=404)
+    return {"balance": u.balance}
+
+
 @router.post("/{user_id}/suspend")
 async def suspend_user(
     user_id: str,
@@ -115,6 +131,8 @@ async def topup_user(
         raise HTTPException(status_code=404, detail={"error": "user_not_found"})
     amount_fen = int(req.amount_yuan * 100)
     u.balance += amount_fen
+    from redis_client import sync_balance_cache as _sync_topup
+    await _sync_topup(str(u.id), u.balance)
     await db.commit()
     return {
         "message": "topup_success",
