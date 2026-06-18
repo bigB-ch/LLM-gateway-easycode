@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import uuid
 import logging
 from sqlalchemy import text
 from database import engine
@@ -32,11 +33,12 @@ async def batch_insert(messages: list[tuple[str, dict]]) -> list[str]:
         msg_ids.append(msg_id)
         idx = i
         values_clauses.append(
-            f"(:rid_{idx}, :uid_{idx}, :prefix_{idx}, :model_{idx}, :provider_{idx}, "
+            f"(:id_{idx}, :rid_{idx}, :uid_{idx}, :prefix_{idx}, :model_{idx}, :provider_{idx}, "
             f":pt_{idx}, :ct_{idx}, :cost_{idx}, :bcost_{idx}, :lat_{idx}, :status_{idx}, :err_{idx}, :ip_{idx}, NOW()) "
             ""
         )
         params.update({
+            f"id_{idx}": str(uuid.uuid4()),
             f"rid_{idx}": data.get("request_id", ""),
             f"uid_{idx}": data.get("user_id", ""),
             f"prefix_{idx}": data.get("api_key_prefix", ""),
@@ -54,7 +56,7 @@ async def batch_insert(messages: list[tuple[str, dict]]) -> list[str]:
 
     sql = (
         "INSERT INTO usage_logs "
-        "(request_id, user_id, api_key_prefix, model, provider, prompt_tokens, completion_tokens, cost, bill_cost, latency_ms, status, error_msg, ip, created_at) "
+        "(id, request_id, user_id, api_key_prefix, model, provider, prompt_tokens, completion_tokens, cost, bill_cost, latency_ms, status, error_msg, ip, created_at) "
         "VALUES " + ", ".join(values_clauses) + " ON CONFLICT (request_id) DO NOTHING"
     )
 
@@ -138,7 +140,7 @@ async def run_consumer():
             )
             if messages:
                 for stream_name, entries in messages:
-                    parsed = [(eid, json.loads(data)) for eid, data in entries]
+                    parsed = [(eid, data) for eid, data in entries]
                     acked = await batch_insert(parsed)
                     for eid in acked:
                         await r.xack(STREAM_KEY, GROUP_NAME, eid)
