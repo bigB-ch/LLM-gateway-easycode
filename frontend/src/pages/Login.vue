@@ -107,14 +107,10 @@ import { useRouter } from 'vue-router'
 import { api } from '../api'
 import { useI18n } from '../i18n'
 import LogoIcon from '../components/LogoIcon.vue'
+import { useTheme } from '../composables/useTheme'
 
 const { t } = useI18n()
-const isDark = ref(document.documentElement.classList.contains('dark'))
-function toggleTheme() {
-  isDark.value = !isDark.value
-  document.documentElement.classList.toggle('dark', isDark.value)
-  localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
-}
+const { isDark, toggleTheme } = useTheme()
 
 const router = useRouter()
 const username = ref('')

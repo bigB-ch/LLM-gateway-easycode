@@ -58,9 +58,11 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { api, isAdmin } from '../api'
 import { useI18n } from '../i18n'
+import { useTheme } from '../composables/useTheme'
 import LogoIcon from './LogoIcon.vue'
 
 const { t } = useI18n()
+const { isDark, toggleTheme, initTheme } = useTheme()
 
 const router = useRouter()
 const route = useRoute()
@@ -68,7 +70,6 @@ const userName = ref('')
 const menuOpen = ref(false)
 const showNoti = ref(false)
 const notiCount = ref(1)
-const isDark = ref(false)
 const isAdminUser = computed(() => isAdmin())
 
 const avatarChar = computed(() => userName.value ? userName.value.charAt(0).toUpperCase() : '?')
@@ -124,17 +125,8 @@ function clearAllNoti() {
 }
 function goPage(p) { router.push(p); menuOpen.value = false }
 function goAdmin() { router.push('/admin'); menuOpen.value = false }
-function toggleTheme() {
-  isDark.value = !isDark.value
-  document.documentElement.classList.toggle('dark', isDark.value)
-  localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
-}
-// Init theme from localStorage
-const savedTheme = localStorage.getItem('theme')
-if (savedTheme === 'dark') {
-  isDark.value = true
-  document.documentElement.classList.add('dark')
-}
+// Theme is managed by the shared useTheme() composable (imported above)
+initTheme()
 
 function logout() {
   localStorage.removeItem('access_token')
