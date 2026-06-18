@@ -606,6 +606,18 @@ async for line in resp.aiter_lines():
 - ✅ SSE 逐行 yield 优化
 - ✅ DeepSeek Anthropic API 透传
 
+### 8.7 最终确认（2026-06-18 下午）
+
+**状态**: ✅ **已解决**
+
+用户使用 LLM Gateway 平台 key（域名 https://easycode.uno）在 Claude Code CLI 中测试流式输出，确认逐 token 渲染正常，流式问题已完全解决。
+
+**关键因素**:
+1. DeepSeek Anthropic API 直接透传（避免 OpenAI→Anthropic 格式转换）
+2. SSE 逐行 yield 优化（降低首个事件延迟）
+3. 域名 + SSL 配置（消除 IP 直连 vs 域名的差异）
+4. 客户端 key 配置正确（API Key 关联了正确的供应商配置）
+
 ---
 
 ## 9. 域名迁移与数据丢失事件（2026-06-18 第七轮）
@@ -751,6 +763,7 @@ docker compose down -v
 | 2026-06-18 (第七轮) | 域名迁移、FAQ 更新、配置检查、**数据丢失事件** |
 | 2026-06-18 (第八轮) | 建立企业级数据保护体系 |
 | 2026-06-18 (第九轮) | 注册失败、容器重启、余额查询报错、收款码配置等问题修复 |
+| 2026-06-18 (最终确认) | **流式问题确认已解决**（域名+SSL+DeepSeek Anthropic透传+SSE逐行yield优化） |
 
 ---
 
