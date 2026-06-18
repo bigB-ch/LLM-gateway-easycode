@@ -1,63 +1,47 @@
 <template>
   <div>
-    <div class="flex-between mb-24">
-      <h1 class="page-title">公告管理</h1>
-      <button class="btn btn-primary" @click="showAdd = true" v-if="!showAdd">+ 添加公告</button>
-    </div>
+    <n-space align="center" justify="space-between" style="margin-bottom:24px">
+      <n-h1 style="margin:0">公告管理</n-h1>
+      <n-button type="primary" @click="showAdd = true" v-if="!showAdd">+ 添加公告</n-button>
+    </n-space>
 
     <!-- Add form -->
-    <div v-if="showAdd" class="card card-padded mb-24">
-      <div style="display:flex;gap:12px;align-items:flex-end">
-        <div style="flex:1">
-          <label class="form-label">公告内容</label>
-          <input v-model="newContent" class="form-input" placeholder="输入公告内容..." @keyup.enter="addAnnouncement" />
-        </div>
-        <button class="btn btn-primary" @click="addAnnouncement" :disabled="adding">{{ adding ? '添加中...' : '添加' }}</button>
-        <button class="btn btn-outline" @click="showAdd = false; newContent = ''">取消</button>
-      </div>
-    </div>
+    <n-card v-if="showAdd" :bordered="true" size="small" style="margin-bottom:24px">
+      <n-space align="flex-end" :size="12">
+        <n-form-item label="公告内容" style="flex:1">
+          <n-input v-model:value="newContent" placeholder="输入公告内容..." @keyup.enter="addAnnouncement" />
+        </n-form-item>
+        <n-button type="primary" :loading="adding" @click="addAnnouncement">{{ adding ? '添加中...' : '添加' }}</n-button>
+        <n-button @click="showAdd = false; newContent = ''">取消</n-button>
+      </n-space>
+    </n-card>
 
     <!-- Edit row -->
-    <div v-if="editingId" class="card card-padded mb-24">
-      <div style="display:flex;gap:12px;align-items:flex-end">
-        <div style="flex:1">
-          <label class="form-label">编辑公告</label>
-          <input v-model="editContent" class="form-input" @keyup.enter="saveEdit" />
-        </div>
-        <button class="btn btn-primary" @click="saveEdit" :disabled="saving">保存</button>
-        <button class="btn btn-outline" @click="editingId = ''; editContent = ''">取消</button>
-      </div>
-    </div>
+    <n-card v-if="editingId" :bordered="true" size="small" style="margin-bottom:24px">
+      <n-space align="flex-end" :size="12">
+        <n-form-item label="编辑公告" style="flex:1">
+          <n-input v-model:value="editContent" @keyup.enter="saveEdit" />
+        </n-form-item>
+        <n-button type="primary" :loading="saving" @click="saveEdit">保存</n-button>
+        <n-button @click="editingId = ''; editContent = ''">取消</n-button>
+      </n-space>
+    </n-card>
 
     <!-- List -->
-    <div class="card">
-      <div class="table-wrap" style="border:none">
-        <table class="data-table">
-          <thead>
-            <tr><th>内容</th><th>时间</th><th style="width:120px">操作</th></tr>
-          </thead>
-          <tbody>
-            <tr v-if="items.length === 0">
-              <td colspan="3"><div class="empty-state"><div class="empty-state-text">暂无公告</div></div></td>
-            </tr>
-            <tr v-for="a in items" :key="a.id">
-              <td>{{ a.content }}</td>
-              <td class="text-secondary">{{ a.date }}</td>
-              <td>
-                <button class="btn btn-outline btn-sm" @click="startEdit(a)" style="margin-right:4px">编辑</button>
-                <button class="btn btn-danger btn-sm" @click="removeAnnouncement(a.id)">删除</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <n-card :bordered="true">
+      <n-data-table :columns="tableColumns" :data="items" :bordered="false" :min-height="80" />
+    </n-card>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, h, onMounted } from 'vue'
+import { useMessage, useDialog } from 'naive-ui'
+import { NCard, NDataTable, NH1, NButton, NInput, NSpace, NFormItem, NPopconfirm } from 'naive-ui'
 import { api } from '../api'
+
+const message = useMessage()
+const dialog = useDialog()
 
 const items = ref([])
 const showAdd = ref(false)
@@ -66,6 +50,23 @@ const adding = ref(false)
 const editingId = ref('')
 const editContent = ref('')
 const saving = ref(false)
+
+const tableColumns = [
+  { title: '内容', key: 'content' },
+  { title: '时间', key: 'date' },
+  {
+    title: '操作', key: 'actions', width: 120,
+    render: (row) => h('div', { style: 'display:flex;gap:4px' }, [
+      h(NButton, { size: 'small', onClick: () => startEdit(row) }, { default: () => '编辑' }),
+      h(NPopconfirm, {
+        onPositiveClick: () => removeAnnouncement(row.id),
+      }, {
+        trigger: () => h(NButton, { size: 'small', color: '#dc2626' }, { default: () => '删除' }),
+        default: () => '确定删除？',
+      }),
+    ]),
+  },
+]
 
 onMounted(loadItems)
 
@@ -81,7 +82,8 @@ async function addAnnouncement() {
     newContent.value = ''
     showAdd.value = false
     await loadItems()
-  } catch (e) { alert('添加失败: ' + e.message) }
+    message.success('添加成功')
+  } catch (e) { message.error('添加失败: ' + e.message) }
   finally { adding.value = false }
 }
 
@@ -98,12 +100,13 @@ async function saveEdit() {
     editingId.value = ''
     editContent.value = ''
     await loadItems()
-  } catch (e) { alert('保存失败: ' + e.message) }
+    message.success('保存成功')
+  } catch (e) { message.error('保存失败: ' + e.message) }
   finally { saving.value = false }
 }
 
 async function removeAnnouncement(id) {
-  if (!confirm('确定删除？')) return
-  try { await api.deleteAnnouncement(id); await loadItems() } catch (e) { alert('删除失败: ' + e.message) }
+  try { await api.deleteAnnouncement(id); await loadItems(); message.success('已删除') }
+  catch (e) { message.error('删除失败: ' + e.message) }
 }
 </script>

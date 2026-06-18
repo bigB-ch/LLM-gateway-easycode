@@ -1,65 +1,25 @@
 <template>
   <div>
-    <div class="flex-between mb-24">
-      <h1 class="page-title">{{ t('globalUsageLog') }}</h1>
-      <button class="btn btn-outline btn-sm" @click="loadUsage">{{ t('refresh') }}</button>
-    </div>
+    <n-space align="center" justify="space-between" style="margin-bottom:24px">
+      <n-h1 style="margin:0">{{ t('globalUsageLog') }}</n-h1>
+      <n-button size="small" @click="loadUsage">{{ t('refresh') }}</n-button>
+    </n-space>
 
-    <div class="card">
-      <div class="table-wrap" style="border:none">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>{{ t('time') }}</th>
-              <th>{{ t('model') }}</th>
-              <th>{{ t('supplier') }}</th>
-              <th>{{ t('inputToken') }}</th>
-              <th>{{ t('outputToken') }}</th>
-              <th>{{ t('cost') }}</th>
-              <th>{{ t('duration') }}</th>
-              <th>{{ t('status') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="logs.length === 0">
-              <td colspan="8">
-                <div class="empty-state" style="padding:40px">
-                  <div class="empty-state-icon">&#x1F4CA;</div>
-                  <div class="empty-state-text">{{ t('noData') }}</div>
-                </div>
-              </td>
-            </tr>
-            <tr v-for="log in logs" :key="log.id">
-              <td class="text-muted" style="font-size:11px;white-space:nowrap">{{ formatTime(log.created_at) }}</td>
-              <td style="font-weight:500;font-size:13px">{{ log.model }}</td>
-              <td style="font-size:12px">{{ log.provider }}</td>
-              <td style="font-family:monospace;font-size:12px">{{ log.prompt_tokens?.toLocaleString() }}</td>
-              <td style="font-family:monospace;font-size:12px">{{ log.completion_tokens?.toLocaleString() }}</td>
-              <td style="font-family:monospace;font-size:12px;color:var(--primary)">&yen;{{ log.cost_yuan }}</td>
-              <td style="font-size:12px">{{ log.latency_ms }}ms</td>
-              <td>
-                <span :class="'badge ' + (log.status === 'success' ? 'badge-success' : 'badge-danger')" style="font-size:9px">
-                  {{ log.status === 'success' ? t('success') : t('error') }}
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <div v-if="totalPages > 1" class="card-padded flex-between">
-        <span class="text-muted" style="font-size:12px">{{ t('totalRecords', { n: total }) }}</span>
-        <div style="display:flex;gap:4px">
-          <button class="btn btn-outline btn-xs" :disabled="page <= 1" @click="goPage(page - 1)">{{ t('prevPage') }}</button>
-          <span class="text-muted" style="font-size:12px;padding:4px 8px">{{ page }} / {{ totalPages }}</span>
-          <button class="btn btn-outline btn-xs" :disabled="page >= totalPages" @click="goPage(page + 1)">{{ t('nextPage') }}</button>
-        </div>
-      </div>
-    </div>
+    <n-card :bordered="true">
+      <n-data-table :columns="tableColumns" :data="logs" :bordered="false" :single-line="false" :min-height="100" />
+      <template v-if="totalPages > 1" #footer>
+        <n-space align="center" justify="space-between">
+          <n-text depth="3" style="font-size:12px">{{ t('totalRecords', { n: total }) }}</n-text>
+          <n-pagination :page="page" :page-count="totalPages" :page-slot="5" @update:page="goPage" />
+        </n-space>
+      </template>
+    </n-card>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, h, onMounted } from 'vue'
+import { NCard, NDataTable, NH1, NPagination, NButton, NSpace, NTag, NText } from 'naive-ui'
 import { api } from '../api'
 import { useI18n } from '../i18n'
 const { t } = useI18n()
@@ -68,6 +28,17 @@ const logs = ref([])
 const page = ref(1)
 const total = ref(0)
 const totalPages = ref(1)
+
+const tableColumns = [
+  { title: t('time'), key: 'created_at', render: (row) => h('span', { style: 'font-size:11px;white-space:nowrap' }, formatTime(row.created_at)) },
+  { title: t('model'), key: 'model', render: (row) => h('span', { style: 'font-weight:500;font-size:13px' }, row.model) },
+  { title: t('supplier'), key: 'provider', render: (row) => h('span', { style: 'font-size:12px' }, row.provider) },
+  { title: t('inputToken'), key: 'prompt_tokens', render: (row) => h('span', { style: 'font-family:monospace;font-size:12px' }, (row.prompt_tokens || 0).toLocaleString()) },
+  { title: t('outputToken'), key: 'completion_tokens', render: (row) => h('span', { style: 'font-family:monospace;font-size:12px' }, (row.completion_tokens || 0).toLocaleString()) },
+  { title: t('cost'), key: 'cost_yuan', render: (row) => h('span', { style: 'font-family:monospace;font-size:12px;color:var(--primary)' }, '¥' + row.cost_yuan) },
+  { title: t('duration'), key: 'latency_ms', render: (row) => row.latency_ms + 'ms' },
+  { title: t('status'), key: 'status', render: (row) => h(NTag, { type: row.status === 'success' ? 'success' : 'error', size: 'tiny' }, { default: () => row.status === 'success' ? t('success') : t('error') }) },
+]
 
 async function loadUsage() {
   try {
@@ -79,15 +50,9 @@ async function loadUsage() {
 }
 onMounted(loadUsage)
 
-function goPage(p) {
-  page.value = p
-  loadUsage()
-}
-
+function goPage(p) { page.value = p; loadUsage() }
 function formatTime(iso) {
   if (!iso) return '-'
-  return new Date(iso).toLocaleString('zh-CN', {
-    month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'
-  })
+  return new Date(iso).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 </script>

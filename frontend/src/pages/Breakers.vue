@@ -1,51 +1,49 @@
 <template>
   <div>
-    <div class="flex-between mb-24">
-      <h1 class="page-title">{{ t('breakerMonitor') }}</h1>
-      <button class="btn btn-outline" @click="refresh">{{ t('refresh') }}</button>
-    </div>
+    <n-space align="center" justify="space-between" style="margin-bottom:24px">
+      <n-h1 style="margin:0">{{ t('breakerMonitor') }}</n-h1>
+      <n-button @click="refresh">{{ t('refresh') }}</n-button>
+    </n-space>
 
-    <div class="card">
-      <div class="table-wrap" style="border:none">
-        <table class="data-table">
-          <thead>
-            <tr><th>供应商</th><th>状态</th><th>失败次数</th><th>{{ t('lastFailureTime') }}</th><th>操作</th></tr>
-          </thead>
-          <tbody>
-            <tr v-if="breakers.length === 0">
-              <td colspan="5"><div class="empty-state"><div class="empty-state-icon">&#x26A1;</div><div class="empty-state-text">{{ t('breakersNoData') }}</div></div></td>
-            </tr>
-            <tr v-for="b in breakers" :key="b.provider">
-              <td><strong>{{ b.provider }}</strong></td>
-              <td><span :class="'badge ' + (b.status === 'closed' ? 'badge-success' : b.status === 'open' ? 'badge-danger' : 'badge-warning')">{{ b.status }}</span></td>
-              <td>{{ b.failure_count }}</td>
-              <td class="text-secondary">{{ b.last_failure_time > 0 ? new Date(b.last_failure_time * 1000).toLocaleString() : '-' }}</td>
-              <td>
-                <button v-if="b.status !== 'closed'" class="btn btn-danger btn-sm" @click="resetBreaker(b.provider)">{{ t('reset') }}</button>
-                <span v-else class="text-muted">-</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <n-card :bordered="true">
+      <n-data-table :columns="tableColumns" :data="breakers" :bordered="false" :min-height="80" />
+    </n-card>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, h, onMounted } from 'vue'
+import { NCard, NDataTable, NH1, NButton, NTag, NEmpty, NPopconfirm, NText } from 'naive-ui'
 import { gatewayApi } from '../gatewayApi'
 import { useI18n } from '../i18n'
 const { t } = useI18n()
 
 const breakers = ref([])
 
-async function loadBreakers() { try { breakers.value = await gatewayApi.listCircuitBreakers() } catch (e) { /* */ } }
+const tableColumns = [
+  { title: '供应商', key: 'provider', render: (row) => h('strong', row.provider) },
+  { title: t('status'), key: 'status', render: (row) => h(NTag, {
+    type: row.status === 'closed' ? 'success' : row.status === 'open' ? 'error' : 'warning',
+    size: 'small',
+  }, { default: () => row.status }) },
+  { title: '失败次数', key: 'failure_count' },
+  { title: t('lastFailureTime'), key: 'last_failure_time',
+    render: (row) => row.last_failure_time > 0
+      ? new Date(row.last_failure_time * 1000).toLocaleString()
+      : '-' },
+  { title: t('operation'), key: 'actions',
+    render: (row) => row.status !== 'closed'
+      ? h(NButton, { size: 'small', color: '#dc2626', onClick: () => resetBreaker(row.provider) }, { default: () => t('reset') })
+      : h(NText, { depth: 3 }, '-') },
+]
+
+async function loadBreakers() {
+  try { breakers.value = await gatewayApi.listCircuitBreakers() } catch (e) { /* */ }
+}
 onMounted(loadBreakers)
 
 async function resetBreaker(provider) {
-  try { await gatewayApi.resetCircuitBreaker(provider); await loadBreakers() } catch (e) { alert('重置失败: ' + e.message) }
+  try { await gatewayApi.resetCircuitBreaker(provider); await loadBreakers() } catch (e) { /* */ }
 }
-
 async function refresh() { await loadBreakers() }
 </script>
