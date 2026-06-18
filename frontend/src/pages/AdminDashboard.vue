@@ -1,41 +1,34 @@
 <template>
   <div>
-    <h1 class="page-title mb-24">{{ t('platformOverview') }}</h1>
+    <n-h1 style="margin-bottom:24px">{{ t('platformOverview') }}</n-h1>
 
-    <div class="stat-grid">
-      <div class="stat-card mc-blue">
-        <div class="stat-icon">&#x1F465;</div>
-        <div class="stat-body">
-          <div class="stat-value">{{ stats.total_users }}</div>
-          <div class="stat-label">{{ t('totalUsers') }}</div>
-        </div>
-      </div>
-      <div class="stat-card mc-purple">
-        <div class="stat-icon">&#x26A1;</div>
-        <div class="stat-body">
-          <div class="stat-value">{{ stats.today_calls }}</div>
-          <div class="stat-label">{{ t('todayCalls') }}</div>
-        </div>
-      </div>
-      <div class="stat-card mc-mint">
-        <div class="stat-icon">&#x1F4B0;</div>
-        <div class="stat-body">
-          <div class="stat-value">&yen;{{ stats.today_revenue_yuan }}</div>
-          <div class="stat-label">{{ t('todayRevenue') }}</div>
-        </div>
-      </div>
-      <div class="stat-card mc-yellow">
-        <div class="stat-icon">&#x2699;&#xFE0F;</div>
-        <div class="stat-body">
-          <div class="stat-value">{{ stats.active_suppliers }}</div>
-          <div class="stat-label">{{ t('activeSuppliers') }}</div>
-        </div>
-      </div>
-    </div>
+    <!-- Stat cards -->
+    <n-grid :x-gap="16" :y-gap="16" :cols="4" style="margin-bottom:16px">
+      <n-grid-item>
+        <n-card size="small" :bordered="true">
+          <n-statistic :label="t('totalUsers')" :value="stats.total_users" />
+        </n-card>
+      </n-grid-item>
+      <n-grid-item>
+        <n-card size="small" :bordered="true">
+          <n-statistic :label="t('todayCalls')" :value="(stats.today_calls || 0).toLocaleString()" />
+        </n-card>
+      </n-grid-item>
+      <n-grid-item>
+        <n-card size="small" :bordered="true">
+          <n-statistic :label="t('todayRevenue')" :value="'¥' + (stats.today_revenue_yuan || '0')" />
+        </n-card>
+      </n-grid-item>
+      <n-grid-item>
+        <n-card size="small" :bordered="true">
+          <n-statistic :label="t('activeSuppliers')" :value="stats.active_suppliers" />
+        </n-card>
+      </n-grid-item>
+    </n-grid>
 
     <!-- Trend Chart -->
-    <div class="card card-padded" style="margin-top:24px">
-      <h3 class="section-title mb-16">消耗趋势（近7天）</h3>
+    <n-card :bordered="true" style="margin-bottom:16px">
+      <n-h3 style="margin:0 0 16px">消耗趋势（近7天）</n-h3>
       <div v-if="trendData.length" style="position:relative;height:170px">
         <svg width="600" height="170" style="width:100%">
           <polygon :points="chartArea" fill="rgba(99,102,241,0.1)" />
@@ -44,84 +37,80 @@
           <text v-for="(d, i) in trendData" :key="'l'+i" :x="x(i)" y="160" text-anchor="end" transform="rotate(-45,x(i),160)" style="font-size:10px;fill:var(--text-muted)">{{ d.date.slice(5) }}</text>
         </svg>
       </div>
-      <div v-else class="empty-state" style="padding:32px">
-        <div class="empty-state-text">暂无数据</div>
-      </div>
-    </div>
+      <n-empty v-else description="暂无数据" style="padding:32px 0" />
+    </n-card>
 
     <!-- Daily Summary Table -->
-    <div class="card" style="margin-top:16px">
-      <div class="card-padded flex-between">
-        <h3 class="section-title">每日消耗明细</h3>
-      </div>
-      <div class="table-wrap" style="border:none">
-        <table class="data-table">
-          <thead>
-            <tr><th>日期</th><th>总调用</th><th>成功</th><th>输入 Token</th><th>输出 Token</th><th>消耗(元)</th></tr>
-          </thead>
-          <tbody>
-            <tr v-if="!dailyItems.length"><td colspan="6"><div class="empty-state" style="padding:40px"><div class="empty-state-text">暂无调用记录</div></div></td></tr>
-            <tr v-for="d in dailyItems" :key="d.date">
-              <td style="font-weight:500">{{ d.date }}</td>
-              <td>{{ d.calls }}</td>
-              <td><span class="badge badge-success" style="font-size:10px">{{ d.success }}</span></td>
-              <td>{{ d.prompt_tokens?.toLocaleString() }}</td>
-              <td>{{ d.completion_tokens?.toLocaleString() }}</td>
-              <td style="font-weight:600;color:var(--primary)">&yen;{{ d.cost_yuan }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <div v-if="totalPages > 1" class="card-padded flex-between">
-        <span class="text-muted" style="font-size:12px">共 {{ dailyTotal }} 天</span>
-        <div style="display:flex;gap:4px">
-          <button class="btn btn-outline btn-xs" :disabled="dailyPage <= 1" @click="goDaily(dailyPage - 1)">上一页</button>
-          <span class="text-muted" style="font-size:12px;padding:4px 8px">{{ dailyPage }} / {{ totalPages }}</span>
-          <button class="btn btn-outline btn-xs" :disabled="dailyPage >= totalPages" @click="goDaily(dailyPage + 1)">下一页</button>
-        </div>
-      </div>
-    </div>
+    <n-card :bordered="true" style="margin-bottom:16px">
+      <template #header>
+        <n-space align="center" justify="space-between">
+          <n-h3 style="margin:0">每日消耗明细</n-h3>
+        </n-space>
+      </template>
+      <n-data-table
+        :columns="dailyColumns"
+        :data="dailyItems"
+        :bordered="false"
+        :single-line="false"
+        :min-height="100"
+      />
+      <template v-if="totalPages > 1" #footer>
+        <n-space align="center" justify="space-between">
+          <n-text depth="3" style="font-size:12px">共 {{ dailyTotal }} 天</n-text>
+          <n-pagination :page="dailyPage" :page-count="totalPages" :page-slot="5" @update:page="goDaily" />
+        </n-space>
+      </template>
+    </n-card>
 
     <!-- Two-column detail -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:24px">
-      <div class="card card-padded">
-        <h3 class="section-title mb-16">{{ t('todayTopModels') }}</h3>
-        <div v-if="stats.top_models && stats.top_models.length > 0">
-          <div v-for="(m, i) in stats.top_models" :key="m.model" class="flex-between" style="padding:8px 0;border-bottom:1px solid var(--border-light)">
-            <div style="display:flex;align-items:center;gap:8px">
-              <span style="font-weight:700;font-size:14px;color:var(--text-secondary)">{{ i + 1 }}</span>
-              <span style="font-weight:500">{{ m.model }}</span>
-            </div>
-            <span style="font-weight:600;font-size:13px">{{ m.count }} 次</span>
-          </div>
-        </div>
-        <div v-else class="text-muted text-center" style="padding:20px">{{ t('breakersNoData') }}</div>
-      </div>
-      <div class="card card-padded">
-        <h3 class="section-title mb-16">{{ t('recentCalls') }}</h3>
-        <div v-if="stats.recent_calls && stats.recent_calls.length > 0">
-          <div v-for="log in stats.recent_calls.slice(0, 8)" :key="log.id" class="flex-between" style="padding:6px 0;border-bottom:1px solid var(--border-light);font-size:12px">
-            <div style="flex:1;min-width:0">
-              <span style="font-weight:500">{{ log.model }}</span>
-              <span class="text-muted" style="margin-left:4px">{{ log.provider }}</span>
-            </div>
-            <div style="display:flex;gap:12px;align-items:center;flex-shrink:0">
-              <span :class="'badge ' + (log.status === 'success' ? 'badge-success' : 'badge-danger')" style="font-size:9px">{{ log.status === 'success' ? '成功' : '失败' }}</span>
-              <span style="font-family:monospace">&yen;{{ log.cost_yuan }}</span>
-              <span class="text-muted">{{ log.latency_ms }}ms</span>
+    <n-grid :x-gap="16" :cols="2">
+      <n-grid-item>
+        <n-card :bordered="true">
+          <n-h3 style="margin:0 0 16px">{{ t('todayTopModels') }}</n-h3>
+          <div v-if="stats.top_models && stats.top_models.length > 0">
+            <div v-for="(m, i) in stats.top_models" :key="m.model" class="flex-between" style="padding:8px 0;border-bottom:1px solid var(--border-light)">
+              <n-space :size="8" align="center">
+                <n-text depth="3" style="font-weight:700;font-size:14px">{{ i + 1 }}</n-text>
+                <n-text style="font-weight:500">{{ m.model }}</n-text>
+              </n-space>
+              <n-text style="font-weight:600;font-size:13px">{{ m.count }} 次</n-text>
             </div>
           </div>
-        </div>
-        <div v-else class="text-muted text-center" style="padding:20px">{{ t('noData') }}</div>
-      </div>
-    </div>
+          <n-empty v-else :description="t('breakersNoData')" style="padding:20px" />
+        </n-card>
+      </n-grid-item>
+      <n-grid-item>
+        <n-card :bordered="true">
+          <n-h3 style="margin:0 0 16px">{{ t('recentCalls') }}</n-h3>
+          <div v-if="stats.recent_calls && stats.recent_calls.length > 0">
+            <div v-for="log in stats.recent_calls.slice(0, 8)" :key="log.id" class="flex-between" style="padding:6px 0;border-bottom:1px solid var(--border-light);font-size:12px">
+              <div style="flex:1;min-width:0">
+                <n-text style="font-weight:500">{{ log.model }}</n-text>
+                <n-text depth="3" style="margin-left:4px">{{ log.provider }}</n-text>
+              </div>
+              <n-space :size="12" align="center" style="flex-shrink:0">
+                <n-tag :type="log.status === 'success' ? 'success' : 'error'" size="tiny">{{ log.status === 'success' ? '成功' : '失败' }}</n-tag>
+                <n-text style="font-family:monospace">¥{{ log.cost_yuan }}</n-text>
+                <n-text depth="3">{{ log.latency_ms }}ms</n-text>
+              </n-space>
+            </div>
+          </div>
+          <n-empty v-else :description="t('noData')" style="padding:20px" />
+        </n-card>
+      </n-grid-item>
+    </n-grid>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, h, onMounted } from 'vue'
+import {
+  NCard, NDataTable, NEmpty, NGrid, NGridItem, NH1, NH3,
+  NPagination, NSpace, NStatistic, NTag, NText,
+} from 'naive-ui'
 import { api } from '../api'
 import { useI18n } from '../i18n'
+
 const { t } = useI18n()
 
 const stats = ref({ total_users: '-', today_calls: '-', today_revenue_yuan: '-', active_suppliers: '-', top_models: [], recent_calls: [] })
@@ -131,6 +120,15 @@ const dailyPage = ref(1)
 const dailyTotal = ref(0)
 const totalPages = ref(1)
 
+const dailyColumns = [
+  { title: '日期', key: 'date', width: 120, render: (row) => h('span', { style: 'font-weight:500' }, row.date) },
+  { title: '总调用', key: 'calls', width: 80 },
+  { title: '成功', key: 'success', width: 80, render: (row) => h(NTag, { type: 'success', size: 'small' }, { default: () => row.success }) },
+  { title: '输入 Token', key: 'prompt_tokens', render: (row) => (row.prompt_tokens || 0).toLocaleString() },
+  { title: '输出 Token', key: 'completion_tokens', render: (row) => (row.completion_tokens || 0).toLocaleString() },
+  { title: '消耗(元)', key: 'cost_yuan', render: (row) => h('span', { style: 'font-weight:600;color:var(--primary)' }, '¥' + row.cost_yuan) },
+]
+
 const maxCost = computed(() => Math.max(...trendData.value.map(d => d.cost_yuan || 0), 1))
 
 function x(i) { return 40 + (i / Math.max(trendData.value.length - 1, 1)) * (600 - 80) }
@@ -139,13 +137,18 @@ const chartPoints = computed(() => trendData.value.map((d, i) => `${x(i)},${y(d.
 const chartArea = computed(() => `${x(0)},150 ` + trendData.value.map((d, i) => `${x(i)},${y(d.cost_yuan)}`).join(' ') + ` ${x(Math.max(trendData.value.length - 1, 0))},150`)
 
 onMounted(async () => {
-  try { stats.value = await api.getAdminDashboard() } catch(e) {}
-  try { const tr = await api.getAdminTrend(7); trendData.value = tr.trend || [] } catch(e) {}
+  try { stats.value = await api.getAdminDashboard() } catch (e) { /* */ }
+  try { const tr = await api.getAdminTrend(7); trendData.value = tr.trend || [] } catch (e) { /* */ }
   await loadDaily()
 })
 
 async function loadDaily() {
-  try { const d = await api.getAdminDaily(dailyPage.value, 14); dailyItems.value = d.items || []; dailyTotal.value = d.total || 0; totalPages.value = Math.ceil(dailyTotal.value / 14) || 1 } catch(e) {}
+  try {
+    const d = await api.getAdminDaily(dailyPage.value, 14)
+    dailyItems.value = d.items || []
+    dailyTotal.value = d.total || 0
+    totalPages.value = Math.ceil(dailyTotal.value / 14) || 1
+  } catch (e) { /* */ }
 }
 function goDaily(p) { dailyPage.value = p; loadDaily() }
 </script>
