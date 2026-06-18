@@ -1021,7 +1021,13 @@ docker compose down -v
 | 5 | Plans, Usage, Settings, Playground, Models | 中 |
 | 6 | Login, Register（已有 useTheme 集成，仅替换表单组件） | 低 |
 
+### 12.7 迁移完成
+
+✅ **全部 20 个页面已迁移完毕**。CSS bundle 从 25KB 降至 19.5KB，JS bundle 稳定在 1.08MB (298KB gzip)。后续可考虑 chunk 拆包优化。
+
 ---
+
+|------|------|
 
 |------|------|
 | 2026-06-16 | 始建文档，记录流式问题排查过程 |
@@ -1036,4 +1042,4 @@ docker compose down -v
 | 2026-06-18 (第九轮) | 注册失败、容器重启、余额查询报错、收款码配置等问题修复 |
 | 2026-06-18 (最终确认) | **流式问题确认已解决**；GitHub 仓库配置完成 |
 | 2026-06-18 (第十轮) | Consumer 消费记录 bug 修复、user-daily 部署到服务器、新增用户分模型用量页面 |
-| 2026-06-18 (第十二轮) | UI 美化：Naive UI 迁移 Phase 0-3，已改 7/20 个页面 |
+| 2026-06-18 (第十二轮) | UI 美化：Naive UI 迁移完成，全部 20 个页面已改造 |
