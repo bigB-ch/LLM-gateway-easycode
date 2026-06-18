@@ -1,161 +1,68 @@
 <template>
   <div>
-    <div class="flex-between mb-24">
-      <h1 class="page-title">{{ t('adminUserUsage') }}</h1>
-    </div>
+    <n-h1 style="margin-bottom:24px">{{ t('adminUserUsage') }}</n-h1>
 
     <!-- All users usage summary table -->
-    <div class="card">
-      <div class="table-wrap">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>{{ t('user') }}</th>
-              <th>{{ t('email') }}</th>
-              <th>{{ t('totalCalls') }}</th>
-              <th>{{ t('success') }}</th>
-              <th>{{ t('inputToken') }}</th>
-              <th>{{ t('outputToken') }}</th>
-              <th>{{ t('totalCost') }}</th>
-              <th>{{ t('lastUsed') }}</th>
-              <th>{{ t('operation') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="loading">
-              <td colspan="9" style="text-align:center;padding:40px">
-                加载中...
-              </td>
-            </tr>
-            <tr v-else-if="items.length === 0">
-              <td colspan="9">
-                <div class="empty-state" style="padding:30px">
-                  <div class="empty-state-icon">&#x1F4CA;</div>
-                  <div class="empty-state-text">{{ t('noData') }}</div>
-                </div>
-              </td>
-            </tr>
-            <tr v-for="row in items" :key="row.user_id">
-              <td style="font-weight:500">{{ row.username }}</td>
-              <td class="text-muted" style="font-size:12px">{{ row.email }}</td>
-              <td style="font-family:monospace">{{ row.calls.toLocaleString() }}</td>
-              <td><span class="badge badge-success" style="font-size:10px">{{ row.success }}</span></td>
-              <td style="font-family:monospace">{{ row.prompt_tokens.toLocaleString() }}</td>
-              <td style="font-family:monospace">{{ row.completion_tokens.toLocaleString() }}</td>
-              <td style="font-family:monospace;color:var(--primary)">&yen;{{ row.cost_yuan }}</td>
-              <td class="text-muted" style="font-size:11px">{{ formatTime(row.last_used) }}</td>
-              <td>
-                <button class="btn btn-outline btn-xs" @click="openDetail(row)">{{ t('details') }}</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <div v-if="totalPages > 1" class="card-padded flex-between">
-        <span class="text-muted" style="font-size:12px">{{ t('totalRecords', { n: total }) }}</span>
-        <div style="display:flex;gap:4px">
-          <button class="btn btn-outline btn-xs" :disabled="page <= 1" @click="goPage(page - 1)">{{ t('prevPage') }}</button>
-          <span class="text-muted" style="font-size:12px;padding:4px 8px">{{ page }} / {{ totalPages }}</span>
-          <button class="btn btn-outline btn-xs" :disabled="page >= totalPages" @click="goPage(page + 1)">{{ t('nextPage') }}</button>
-        </div>
-      </div>
-    </div>
+    <n-card :bordered="true">
+      <n-data-table
+        :columns="tableColumns"
+        :data="items"
+        :bordered="false"
+        :single-line="false"
+        :loading="loading"
+        :min-height="150"
+      />
+      <template v-if="totalPages > 1" #footer>
+        <n-space align="center" justify="space-between">
+          <n-text depth="3" style="font-size:12px">{{ t('totalRecords', { n: total }) }}</n-text>
+          <n-pagination :page="page" :page-count="totalPages" :page-slot="5" @update:page="goPage" />
+        </n-space>
+      </template>
+    </n-card>
 
     <!-- Per-model detail modal -->
-    <div v-if="detailUser" class="modal-overlay" @click.self="closeDetail">
-      <div class="modal" style="max-width:800px">
-        <div class="modal-header">
-          <h3>{{ t('perModelUsage') }} - {{ detailUser.username }}</h3>
-          <button class="modal-close" @click="closeDetail">&times;</button>
-        </div>
-        <div class="modal-body" style="max-height:70vh;overflow-y:auto">
-          <!-- Model summary -->
-          <h4 style="margin:0 0 8px;font-size:13px;color:var(--text-muted)">{{ t('modelSummary') }}</h4>
-          <table class="data-table" style="margin-bottom:16px">
-            <thead>
-              <tr>
-                <th>{{ t('model') }}</th>
-                <th>{{ t('calls') }}</th>
-                <th>{{ t('success') }}</th>
-                <th>{{ t('inputToken') }}</th>
-                <th>{{ t('outputToken') }}</th>
-                <th>{{ t('totalCost') }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="detailModels.length === 0">
-                <td colspan="6" style="text-align:center;padding:20px">
-                  加载中...
-                </td>
-              </tr>
-              <tr v-for="m in detailModels" :key="m.model">
-                <td style="font-weight:500;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="m.model">{{ m.model }}</td>
-                <td style="font-family:monospace">{{ m.calls.toLocaleString() }}</td>
-                <td><span class="badge badge-success" style="font-size:10px">{{ m.success }}</span></td>
-                <td style="font-family:monospace">{{ m.prompt_tokens.toLocaleString() }}</td>
-                <td style="font-family:monospace">{{ m.completion_tokens.toLocaleString() }}</td>
-                <td style="font-family:monospace;color:var(--primary)">&yen;{{ m.cost_yuan }}</td>
-              </tr>
-            </tbody>
-          </table>
+    <n-modal v-model:show="showDetail" preset="card" :title="t('perModelUsage') + ' - ' + (detailUser?.username || '')"
+      style="max-width:800px" :bordered="true">
+      <div style="max-height:65vh;overflow-y:auto">
+        <!-- Model summary -->
+        <n-h4 style="margin:0 0 8px;font-size:13px;color:var(--text-muted)">{{ t('modelSummary') }}</n-h4>
+        <n-data-table
+          :columns="modelColumns"
+          :data="detailModels"
+          :bordered="false"
+          :single-line="false"
+          :min-height="60"
+          style="margin-bottom:16px"
+        />
 
-          <!-- Detail logs -->
-          <h4 style="margin:0 0 8px;font-size:13px;color:var(--text-muted)">{{ t('usageLogs') }}</h4>
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>{{ t('time') }}</th>
-                <th>{{ t('model') }}</th>
-                <th>{{ t('supplier') }}</th>
-                <th>{{ t('inputToken') }}</th>
-                <th>{{ t('outputToken') }}</th>
-                <th>{{ t('cost') }}</th>
-                <th>{{ t('duration') }}</th>
-                <th>{{ t('status') }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="detailLogs.length === 0">
-                <td colspan="8" style="text-align:center;padding:20px">
-                  加载中...
-                </td>
-              </tr>
-              <tr v-for="log in detailLogs" :key="log.id">
-                <td class="text-muted" style="font-size:11px;white-space:nowrap">{{ formatTime(log.created_at) }}</td>
-                <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;font-size:13px" :title="log.model">{{ log.model }}</td>
-                <td style="font-size:12px">{{ log.provider }}</td>
-                <td style="font-family:monospace;font-size:12px">{{ log.prompt_tokens?.toLocaleString() }}</td>
-                <td style="font-family:monospace;font-size:12px">{{ log.completion_tokens?.toLocaleString() }}</td>
-                <td style="font-family:monospace;font-size:12px;color:var(--primary)">&yen;{{ log.cost_yuan }}</td>
-                <td style="font-size:12px">{{ log.latency_ms }}ms</td>
-                <td>
-                  <span :class="'badge ' + (log.status === 'success' ? 'badge-success' : 'badge-danger')" style="font-size:9px">
-                    {{ log.status === 'success' ? t('success') : t('error') }}
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <!-- Detail logs -->
+        <n-h4 style="margin:0 0 8px;font-size:13px;color:var(--text-muted)">{{ t('usageLogs') }}</n-h4>
+        <n-data-table
+          :columns="logColumns"
+          :data="detailLogs"
+          :bordered="false"
+          :single-line="false"
+          :min-height="60"
+        />
 
-          <!-- Pagination for detail logs -->
-          <div v-if="detailTotalPages > 1" class="flex-between" style="padding:12px 0">
-            <span class="text-muted" style="font-size:12px">{{ t('totalRecords', { n: detailTotal }) }}</span>
-            <div style="display:flex;gap:4px">
-              <button class="btn btn-outline btn-xs" :disabled="detailPage <= 1" @click="detailGoPage(detailPage - 1)">{{ t('prevPage') }}</button>
-              <span class="text-muted" style="font-size:12px;padding:4px 8px">{{ detailPage }} / {{ detailTotalPages }}</span>
-              <button class="btn btn-outline btn-xs" :disabled="detailPage >= detailTotalPages" @click="detailGoPage(detailPage + 1)">{{ t('nextPage') }}</button>
-            </div>
-          </div>
-        </div>
+        <!-- Pagination for detail logs -->
+        <n-space v-if="detailTotalPages > 1" align="center" justify="space-between" style="padding:12px 0">
+          <n-text depth="3" style="font-size:12px">{{ t('totalRecords', { n: detailTotal }) }}</n-text>
+          <n-pagination :page="detailPage" :page-count="detailTotalPages" :page-slot="5" @update:page="detailGoPage" />
+        </n-space>
       </div>
-    </div>
+    </n-modal>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, h, onMounted } from 'vue'
+import {
+  NCard, NDataTable, NH1, NH4, NModal, NPagination, NSpace, NTag, NText, NButton,
+} from 'naive-ui'
 import { api } from '../api'
 import { useI18n } from '../i18n'
+
 const { t } = useI18n()
 
 const items = ref([])
@@ -164,13 +71,54 @@ const total = ref(0)
 const totalPages = ref(1)
 const loading = ref(true)
 
-// Detail modal state
+// Detail modal
+const showDetail = ref(false)
 const detailUser = ref(null)
 const detailModels = ref([])
 const detailLogs = ref([])
 const detailPage = ref(1)
 const detailTotal = ref(0)
 const detailTotalPages = ref(1)
+
+const tableColumns = [
+  { title: t('user'), key: 'username', render: (row) => h('span', { style: 'font-weight:500' }, row.username) },
+  { title: t('email'), key: 'email', render: (row) => h('span', { style: 'color:var(--text-muted);font-size:12px' }, row.email) },
+  { title: t('totalCalls'), key: 'calls', render: (row) => (row.calls || 0).toLocaleString() },
+  { title: t('success'), key: 'success', render: (row) => h(NTag, { type: 'success', size: 'small' }, { default: () => row.success }) },
+  { title: t('inputToken'), key: 'prompt_tokens', render: (row) => (row.prompt_tokens || 0).toLocaleString() },
+  { title: t('outputToken'), key: 'completion_tokens', render: (row) => (row.completion_tokens || 0).toLocaleString() },
+  { title: t('totalCost'), key: 'cost_yuan', render: (row) => h('span', { style: 'font-family:monospace;color:var(--primary)' }, '¥' + row.cost_yuan) },
+  { title: t('lastUsed'), key: 'last_used', render: (row) => h('span', { style: 'color:var(--text-muted);font-size:11px' }, formatTime(row.last_used)) },
+  {
+    title: t('operation'), key: 'actions', width: 80,
+    render: (row) => h(NButton, { size: 'tiny', onClick: () => openDetail(row) }, { default: () => t('details') }),
+  },
+]
+
+const modelColumns = [
+  { title: t('model'), key: 'model', render: (row) => h('span', { style: 'font-weight:500' }, row.model) },
+  { title: t('calls'), key: 'calls', render: (row) => (row.calls || 0).toLocaleString() },
+  { title: t('success'), key: 'success', render: (row) => h(NTag, { type: 'success', size: 'small' }, { default: () => row.success }) },
+  { title: t('inputToken'), key: 'prompt_tokens', render: (row) => (row.prompt_tokens || 0).toLocaleString() },
+  { title: t('outputToken'), key: 'completion_tokens', render: (row) => (row.completion_tokens || 0).toLocaleString() },
+  { title: t('totalCost'), key: 'cost_yuan', render: (row) => h('span', { style: 'font-family:monospace;color:var(--primary)' }, '¥' + row.cost_yuan) },
+]
+
+const logColumns = [
+  { title: t('time'), key: 'created_at', render: (row) => h('span', { style: 'font-size:11px;white-space:nowrap' }, formatTime(row.created_at)) },
+  { title: t('model'), key: 'model', render: (row) => h('span', { style: 'font-weight:500;font-size:13px' }, row.model) },
+  { title: t('supplier'), key: 'provider' },
+  { title: t('inputToken'), key: 'prompt_tokens', render: (row) => h('span', { style: 'font-family:monospace;font-size:12px' }, (row.prompt_tokens || 0).toLocaleString()) },
+  { title: t('outputToken'), key: 'completion_tokens', render: (row) => h('span', { style: 'font-family:monospace;font-size:12px' }, (row.completion_tokens || 0).toLocaleString()) },
+  { title: t('cost'), key: 'cost_yuan', render: (row) => h('span', { style: 'font-family:monospace;font-size:12px;color:var(--primary)' }, '¥' + row.cost_yuan) },
+  { title: t('duration'), key: 'latency_ms', render: (row) => row.latency_ms + 'ms' },
+  {
+    title: t('status'), key: 'status', render: (row) => h(NTag, {
+      type: row.status === 'success' ? 'success' : 'error',
+      size: 'tiny',
+    }, { default: () => row.status === 'success' ? t('success') : t('error') }),
+  },
+]
 
 async function loadData() {
   loading.value = true
@@ -191,13 +139,8 @@ function goPage(p) {
 async function openDetail(row) {
   detailUser.value = row
   detailPage.value = 1
+  showDetail.value = true
   await loadDetail()
-}
-
-function closeDetail() {
-  detailUser.value = null
-  detailModels.value = []
-  detailLogs.value = []
 }
 
 async function loadDetail() {
@@ -219,7 +162,7 @@ function detailGoPage(p) {
 function formatTime(iso) {
   if (!iso) return '-'
   return new Date(iso).toLocaleString('zh-CN', {
-    month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+    month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
   })
 }
 

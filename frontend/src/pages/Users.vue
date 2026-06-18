@@ -1,120 +1,77 @@
 <template>
   <div>
-    <div class="flex-between mb-24">
-      <h1 class="page-title">{{ t('userManagement') }}</h1>
-      <button class="btn btn-outline btn-sm" @click="loadUsers">{{ t('refresh') }}</button>
-    </div>
+    <n-space align="center" justify="space-between" style="margin-bottom:24px">
+      <n-h1 style="margin:0">{{ t('userManagement') }}</n-h1>
+      <n-button size="small" @click="loadUsers">{{ t('refresh') }}</n-button>
+    </n-space>
 
-    <!-- Stats bar -->
-    <div class="stat-grid mb-24" style="grid-template-columns:repeat(3,1fr)">
-      <div class="stat-card mc-blue">
-        <div class="stat-icon">&#x1F465;</div>
-        <div class="stat-body">
-          <div class="stat-value">{{ totalUsers }}</div>
-          <div class="stat-label">{{ t('totalUsers') }}</div>
-        </div>
-      </div>
-      <div class="stat-card mc-mint">
-        <div class="stat-icon">&#x2705;</div>
-        <div class="stat-body">
-          <div class="stat-value">{{ activeCount }}</div>
-          <div class="stat-label">活跃用户</div>
-        </div>
-      </div>
-      <div class="stat-card mc-yellow">
-        <div class="stat-icon">&#x1F6AB;</div>
-        <div class="stat-body">
-          <div class="stat-value">{{ suspendedCount }}</div>
-          <div class="stat-label">已{{ t('disableBtn') }}</div>
-        </div>
-      </div>
-    </div>
+    <!-- Stats -->
+    <n-grid :x-gap="16" :cols="3" style="margin-bottom:24px">
+      <n-grid-item>
+        <n-card size="small" :bordered="true">
+          <n-statistic :label="t('totalUsers')" :value="totalUsers" />
+        </n-card>
+      </n-grid-item>
+      <n-grid-item>
+        <n-card size="small" :bordered="true">
+          <n-statistic label="活跃用户" :value="activeCount" />
+        </n-card>
+      </n-grid-item>
+      <n-grid-item>
+        <n-card size="small" :bordered="true">
+          <n-statistic :label="'已' + t('disableBtn')" :value="suspendedCount" />
+        </n-card>
+      </n-grid-item>
+    </n-grid>
 
     <!-- User table -->
-    <div class="card">
-      <div class="table-wrap" style="border:none">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>{{ t('user') }}</th>
-              <th>{{ t('role') }}</th>
-              <th>{{ t('balance') }}</th>
-              <th>{{ t('status') }}</th>
-              <th>{{ t('createTime') }}</th>
-              <th>{{ t('operation') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="users.length === 0">
-              <td colspan="6">
-                <div class="empty-state" style="padding:40px">
-                  <div class="empty-state-icon">&#x1F465;</div>
-                  <div class="empty-state-text">{{ t('noData') }}</div>
-                </div>
-              </td>
-            </tr>
-            <tr v-for="u in users" :key="u.id">
-              <td>
-                <div style="font-weight:600">{{ u.username }}</div>
-                <div class="text-muted" style="font-size:11px">{{ u.email }}</div>
-              </td>
-              <td>
-                <span :class="'badge ' + (u.role === 'super_admin' ? 'badge-danger' : u.role === 'admin' ? 'badge-warning' : 'badge-default')" style="font-size:10px">{{ u.role }}</span>
-              </td>
-              <td style="font-weight:600;font-family:monospace">&yen;{{ u.balance_yuan != null ? u.balance_yuan : (u.balance / 100).toFixed(2) }}</td>
-              <td>
-                <span :class="'badge ' + (u.status === 'active' ? 'badge-success' : 'badge-danger')" style="font-size:10px">{{ u.status === 'active' ? t('normalStatus') : t('suspended') }}</span>
-              </td>
-              <td class="text-muted" style="font-size:12px">{{ formatDate(u.created_at) }}</td>
-              <td>
-                <button class="btn btn-outline btn-xs" @click="openTopup(u)" style="margin-right:4px">{{ t('topUp') }}</button>
-                <button v-if="u.status === 'active'" class="btn btn-danger btn-xs" @click="toggleUser(u, 'suspend')">{{ t('disableBtn') }}</button>
-                <button v-else class="btn btn-outline btn-xs" @click="toggleUser(u, 'activate')">{{ t('enableBtn') }}</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <div v-if="hasMore" class="card-padded text-center">
-        <button class="btn btn-outline btn-sm" @click="loadMore" :disabled="loading">加载更多</button>
-      </div>
-    </div>
+    <n-card :bordered="true">
+      <n-data-table
+        :columns="tableColumns"
+        :data="users"
+        :bordered="false"
+        :single-line="false"
+        :min-height="100"
+      />
+      <template v-if="hasMore" #footer>
+        <n-space justify="center">
+          <n-button size="small" :loading="loading" @click="loadMore">{{ t('loadMore') || '加载更多' }}</n-button>
+        </n-space>
+      </template>
+    </n-card>
 
     <!-- Topup Modal -->
-    <div v-if="topupUser" class="modal-overlay" @click.self="topupUser = null">
-      <div class="modal-content" style="max-width:400px">
-        <div class="modal-header flex-between">
-          <h3>用户{{ t('topUp') }}</h3>
-          <button class="btn btn-outline btn-xs" @click="topupUser = null">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div style="margin-bottom:12px">
-            <span style="font-size:13px">{{ topupUser.username }}</span>
-            <span class="text-muted" style="font-size:11px;margin-left:8px">{{ topupUser.email }}</span>
-          </div>
-          <div class="form-group">
-            <label class="form-label">{{ t('currentBalance') }}</label>
-            <div style="font-weight:600;font-size:16px">&yen;{{ topupUser.balance_yuan }}</div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">{{ t('topUp') }}金额 (元)</label>
-            <input v-model.number="topupAmount" type="number" step="0.01" min="0.01" class="form-input" placeholder="0.00" />
-          </div>
-          <div v-if="topupError" class="alert alert-error" style="font-size:12px">{{ topupError }}</div>
-          <button class="btn btn-primary" style="width:100%" :disabled="toppingUp" @click="doTopup">
-            {{ toppingUp ? t('processingBtn') : t('confirmTopUp') }}
-          </button>
-        </div>
-      </div>
-    </div>
+    <n-modal v-model:show="showTopup" preset="card" :title="'用户' + t('topUp')" style="max-width:400px" :bordered="true" :mask-closable="true">
+      <n-space vertical :size="12">
+        <n-text style="font-size:13px">{{ topupUser?.username }}</n-text>
+        <n-text depth="3" style="font-size:11px">{{ topupUser?.email }}</n-text>
+        <n-statistic label="当前余额" :value="'¥' + (topupUser?.balance_yuan || '0.00')" />
+        <n-form-item label="充值金额 (元)">
+          <n-input-number v-model:value="topupAmount" :min="0.01" :step="0.01" placeholder="0.00" style="width:100%" />
+        </n-form-item>
+        <n-alert v-if="topupError" type="error" :bordered="true" closable @close="topupError = ''">
+          {{ topupError }}
+        </n-alert>
+        <n-button type="primary" style="width:100%" :loading="toppingUp" @click="doTopup">
+          {{ toppingUp ? t('processingBtn') : t('confirmTopUp') }}
+        </n-button>
+      </n-space>
+    </n-modal>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, h, onMounted } from 'vue'
+import { useDialog } from 'naive-ui'
+import {
+  NCard, NDataTable, NGrid, NGridItem, NH1, NModal, NButton,
+  NInputNumber, NSpace, NStatistic, NTag, NText, NFormItem, NAlert,
+} from 'naive-ui'
 import { api } from '../api'
 import { useI18n } from '../i18n'
+
 const { t } = useI18n()
+const dialog = useDialog()
 
 const users = ref([])
 const hasMore = ref(false)
@@ -123,6 +80,7 @@ const loading = ref(false)
 const totalUsers = ref(0)
 
 // Topup
+const showTopup = ref(false)
 const topupUser = ref(null)
 const topupAmount = ref(0)
 const topupError = ref('')
@@ -130,6 +88,61 @@ const toppingUp = ref(false)
 
 const activeCount = computed(() => users.value.filter(u => u.status === 'active').length)
 const suspendedCount = computed(() => users.value.filter(u => u.status !== 'active').length)
+
+const tableColumns = [
+  {
+    title: t('user'),
+    key: 'username',
+    render: (row) => h('div', [
+      h('div', { style: 'font-weight:600' }, row.username),
+      h('div', { style: 'font-size:11px;color:var(--text-muted)' }, row.email),
+    ]),
+  },
+  {
+    title: t('role'),
+    key: 'role',
+    width: 100,
+    render: (row) => {
+      const type = row.role === 'super_admin' ? 'error' : row.role === 'admin' ? 'warning' : 'default'
+      return h(NTag, { type, size: 'small' }, { default: () => row.role })
+    },
+  },
+  {
+    title: t('balance'),
+    key: 'balance',
+    width: 120,
+    render: (row) => h('span', { style: 'font-weight:600;font-family:monospace' },
+      '¥' + (row.balance_yuan != null ? row.balance_yuan : (row.balance / 100).toFixed(2))),
+  },
+  {
+    title: t('status'),
+    key: 'status',
+    width: 80,
+    render: (row) => h(NTag, {
+      type: row.status === 'active' ? 'success' : 'error',
+      size: 'small',
+    }, { default: () => row.status === 'active' ? t('normalStatus') : t('suspended') }),
+  },
+  {
+    title: t('createTime'),
+    key: 'created_at',
+    width: 120,
+    render: (row) => formatDate(row.created_at),
+  },
+  {
+    title: t('operation'),
+    key: 'actions',
+    width: 160,
+    render: (row) => h('div', { style: 'display:flex;gap:4px' }, [
+      h(NButton, { size: 'tiny', onClick: () => openTopup(row) }, { default: () => t('topUp') }),
+      row.status === 'active'
+        ? h(NButton, { size: 'tiny', color: '#dc2626', onClick: () => confirmToggle(row, 'suspend') },
+            { default: () => t('disableBtn') })
+        : h(NButton, { size: 'tiny', onClick: () => confirmToggle(row, 'activate') },
+            { default: () => t('enableBtn') }),
+    ]),
+  },
+]
 
 async function loadUsers() {
   loading.value = true
@@ -155,19 +168,29 @@ async function loadMore() {
   finally { loading.value = false }
 }
 
-async function toggleUser(u, action) {
+function confirmToggle(u, action) {
   const label = action === 'suspend' ? '禁用' : '启用'
-  if (!confirm(`确定${label}用户 "${u.username}"？`)) return
-  try {
-    await api.toggleUser(u.id, action)
-    u.status = action === 'suspend' ? 'suspended' : 'active'
-  } catch (e) { alert('操作失败: ' + e.message) }
+  dialog.warning({
+    title: '确认操作',
+    content: `确定${label}用户 "${u.username}"？`,
+    positiveText: '确定',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      try {
+        await api.toggleUser(u.id, action)
+        u.status = action === 'suspend' ? 'suspended' : 'active'
+      } catch (e) {
+        dialog.error({ title: '操作失败', content: e.message })
+      }
+    },
+  })
 }
 
 function openTopup(u) {
   topupUser.value = u
   topupAmount.value = 0
   topupError.value = ''
+  showTopup.value = true
 }
 
 async function doTopup() {
@@ -182,7 +205,7 @@ async function doTopup() {
     topupUser.value.balance_yuan = res.balance_yuan
     const u = users.value.find(x => x.id === topupUser.value.id)
     if (u) u.balance_yuan = res.balance_yuan
-    topupUser.value = null
+    showTopup.value = false
   } catch (e) {
     topupError.value = e.message || '充值失败'
   } finally {
@@ -192,29 +215,8 @@ async function doTopup() {
 
 function formatDate(iso) {
   if (!iso) return '-'
-  return new Date(iso).toLocaleDateString('zh-CN', { year:'numeric', month:'2-digit', day:'2-digit' })
+  return new Date(iso).toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' })
 }
 
 onMounted(loadUsers)
 </script>
-
-<style scoped>
-.modal-overlay {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
-  z-index: 1000;
-}
-.modal-content {
-  background: var(--surface);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  width: 100%;
-}
-.modal-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border-light);
-}
-.modal-body {
-  padding: 20px;
-}
-</style>
