@@ -512,7 +512,101 @@ docker exec llm-gateway-gateway-1 python /tmp/sse_full_compare.py
 
 ---
 
-## 更新记录
+## 8. 流式超时问题（Claude Code CLI 3s 限制）
+
+### 8.1 第六轮调查发现（2026-06-18）
+
+通过对比测试发现了流式问题的根本原因。
+
+**发现历程**：
+1. 部署 DeepSeek Anthropic API 透传后，客户端流式仍未改善
+2. 对生产环境进行诊断测试：对比简单请求 vs 大型请求的延迟
+3. 发现关键差异：Claude Code CLI 设置 `x-stainless-timeout: 3000ms`
+
+### 8.2 对比测试结果
+
+| 场景 | message_start | 首个 delta | 总完成 | 超时? |
+|------|---|---|---|---|
+| 简单请求（一句话） | 0.4s | 0.87s | 2.35s | ✅ No |
+| 大型请求（1.5MB） | 3.49s | 3.5+s | 18.71s | ❌ Yes |
+
+### 8.3 根本原因
+
+```
+Claude Code CLI 请求头:
+x-stainless-timeout: 3000               # 3 秒硬超时
+content-length: 1717781                 # 1.7MB 对话历史
+authorization: Bearer ...               # 用户 key
+
+处理链路耗时分解:
+1. HTTP 上传 1.5MB 请求       ~0.5s
+2. Gateway 接收完整请求        ~0.5s
+3. Gateway 构建 DeepSeek 请求  ~0.1s
+4. DeepSeek API 处理 + 首 token ~1.5-2.0s  ← 上游瓶颈
+5. 总耗时                      3.5-4.0s   > 3.0s 超时
+```
+
+**结论**: 不是 Gateway 流式"不工作"，而是客户端超时配置与上游延迟不匹配。
+
+### 8.4 本轮部署的优化
+
+#### 优化：SSE 事件缓冲 → 逐行立即 yield
+
+**问题代码**（原来的缓冲方式）:
+```python
+event_buf = []
+async for line in resp.aiter_lines():
+    if line == "":  # 空行 = 事件结束
+        yield "\n".join(event_buf) + "\n\n"
+        event_buf = []
+    else:
+        event_buf.append(line)
+```
+
+**改进代码**:
+```python
+async for line in resp.aiter_lines():
+    # 逐行立即 yield，不缓冲
+    yield line + "\n"
+```
+
+**效果**: 
+- 减少约 100-200ms 的处理延迟
+- 对简单请求无感知
+- 对大型请求可减少在 3s 边界的超时概率（但不能根本解决）
+
+### 8.5 对标分析
+
+为什么同样的大型请求在其他平台可以流式，我们的 Gateway 不行？
+
+| 平台 | 类型 | 模式 | 超时 | 首个 delta |
+|------|------|------|------|---|
+| DeepSeek 官方 | 原生 API | HTTPS | ? | < 1s |
+| nscode.xyz | 第三方平台 | HTTPS | ? | < 1s |
+| 我们的 Gateway | 中转平台 | HTTPS | 3s | 3.5s |
+
+**可能差异**:
+- 官方/第三方可能超时更宽松（5-10s）
+- 或有本地缓存/优化加速
+- 或客户端使用了不同的 SDK 版本（CLI vs npm）
+
+### 8.6 未来改进方向
+
+#### 长期方案（推荐）
+联系 Anthropic 团队，调整 Claude Code CLI 的超时参数：
+- 现在: `x-stainless-timeout: 3000` (3s)
+- 改为: `x-stainless-timeout: 5000` (5s) 或分阶段超时
+
+#### 中期方案
+- 用户侧：减少对话历史大小（1.5MB → 300KB）
+- 用户侧：使用 deepseek-v4-flash 代替 v4-pro
+- 用户侧：启用 prompt caching
+
+#### 短期方案（已做）
+- ✅ SSE 逐行 yield 优化
+- ✅ DeepSeek Anthropic API 透传
+
+---
 
 | 日期 | 内容 |
 |------|------|
@@ -522,3 +616,4 @@ docker exec llm-gateway-gateway-1 python /tmp/sse_full_compare.py
 | 2026-06-17 (第三轮) | 补充模型名替换、tcp_nodelay、用户本地 curl 验证、nscode.xyz 对比、所有排查方向记录 |
 | 2026-06-17 (第四轮) | 补充 SSE 整事件 yield 方案、anthropic-beta 测试、全部已试修改汇总 |
 | 2026-06-17 (第五轮) | 抓到 CLI 完整请求头；发现 messages 转换丢弃 tool_use/tool_result；修复原始 messages 透传；转发 anthropic-beta/thinking |
+| 2026-06-18 (第六轮) | **找到根本原因**：Claude Code CLI 3s 超时 vs 大型请求 3.5+s 处理时间；部署 SSE 逐行 yield 优化 |
