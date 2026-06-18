@@ -618,6 +618,8 @@ async for line in resp.aiter_lines():
 3. 域名 + SSL 配置（消除 IP 直连 vs 域名的差异）
 4. 客户端 key 配置正确（API Key 关联了正确的供应商配置）
 
+> **注意**: 当前流式方案依赖 DeepSeek 的 Anthropic 兼容接口。后续对接其他平台供应商时，需重新验证流式兼容性，特别是那些不提供 Anthropic 兼容接口的平台。
+
 ---
 
 ## 9. 域名迁移与数据丢失事件（2026-06-18 第七轮）
