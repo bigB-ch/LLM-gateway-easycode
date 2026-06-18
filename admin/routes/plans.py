@@ -214,7 +214,7 @@ async def alipay_recharge(
     if not result.get("success"):
         raise HTTPException(status_code=400, detail={"error": result.get("error", "alipay_failed")})
 
-    # Save pending recharge record
+    # Save pending recharge record with QR code and trade number
     amount_fen = int(req.amount_yuan * 100)
     rec = RechargeRecord(
         id=uuid.uuid4(),
@@ -222,6 +222,8 @@ async def alipay_recharge(
         amount=amount_fen,
         method="alipay",
         status="pending",
+        qr_code=result.get("qr_code"),
+        out_trade_no=result.get("out_trade_no"),
     )
     db.add(rec)
     await db.commit()
