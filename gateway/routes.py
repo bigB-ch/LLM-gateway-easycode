@@ -171,7 +171,6 @@ async def anthropic_messages(request: Request):
                     async with AsyncClient(timeout=120.0) as client:
                         async with client.stream("POST", anthro_base, json=ds_body, headers=ds_headers) as resp:
                             resp.raise_for_status()
-                            event_buf = []
                             async for line in resp.aiter_lines():
                                 # Intercept message_start to restore original model name
                                 if line.startswith("data: ") and '"message_start"' in line:
@@ -185,27 +184,21 @@ async def anthropic_messages(request: Request):
                                     except Exception:
                                         pass
 
-                                if line == "":
-                                    # Empty line = end of SSE event, yield complete event at once
-                                    if event_buf:
-                                        yield "\n".join(event_buf) + "\n\n"
-                                        event_buf = []
-                                else:
-                                    event_buf.append(line)
-                                    if line.startswith("data: "):
-                                        try:
-                                            ev = __import__('json').loads(line[6:])
-                                            if ev.get("type") == "message_start":
-                                                u = ev.get("message", {}).get("usage", {})
-                                                prompt_tokens = u.get("input_tokens", 0)
-                                            elif ev.get("type") == "message_delta":
-                                                u = ev.get("usage", {})
-                                                completion_tokens = u.get("output_tokens", 0)
-                                        except Exception:
-                                            pass
-                            # Flush remaining buffer
-                            if event_buf:
-                                yield "\n".join(event_buf) + "\n\n"
+                                # Extract token counts from DeepSeek events
+                                if line.startswith("data: "):
+                                    try:
+                                        ev = __import__('json').loads(line[6:])
+                                        if ev.get("type") == "message_start":
+                                            u = ev.get("message", {}).get("usage", {})
+                                            prompt_tokens = u.get("input_tokens", 0)
+                                        elif ev.get("type") == "message_delta":
+                                            u = ev.get("usage", {})
+                                            completion_tokens = u.get("output_tokens", 0)
+                                    except Exception:
+                                        pass
+
+                                # Yield line immediately without buffering for low latency
+                                yield line + "\n"
                 except Exception as e:
                     stream_error = str(e)
 
