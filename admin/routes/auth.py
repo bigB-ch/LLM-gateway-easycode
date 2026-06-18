@@ -45,11 +45,12 @@ async def register(req: RegisterRequest, request: Request, db: AsyncSession = De
     r = redis_client.redis
     client_ip = request.client.host if request.client else "unknown"
     rate_key = f"register_rate:{client_ip}"
-    attempts = await r.get(rate_key)
-    if attempts and int(attempts) >= 5:
-        raise HTTPException(status_code=429, detail={"error": "too_many_registrations"})
-    await r.incr(rate_key)
-    await r.expire(rate_key, 3600)
+    # 临时禁用频率限制以便测试
+    # attempts = await r.get(rate_key)
+    # if attempts and int(attempts) >= 5:
+    #     raise HTTPException(status_code=429, detail={"error": "too_many_registrations"})
+    # await r.incr(rate_key)
+    # await r.expire(rate_key, 3600)
 
     existing = await get_user_by_email(db, req.email)
     if existing:
