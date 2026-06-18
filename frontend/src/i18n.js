@@ -12,6 +12,7 @@ const messages = {
     adminDashboard: '数据看板', adminSuppliers: '供应商管理', adminBreakers: '熔断器监控',
     adminUsers: '用户管理', adminPlans: '套餐管理', adminUsage: '用量日志',
         adminUserDaily: '用户每日用量',
+    adminUserUsage: '用户分模型用量',
     adminBackToUser: '返回用户端', adminPanel: '管理后台',
     // Login
     loginTitle: '登录', loginSubtitle: '让 Coding 更简单', username: '用户名',
@@ -153,6 +154,10 @@ const messages = {
     normalStatus: '正常', suspended: '已禁用', topupBtn: '充值', enableBtn: '启用',
     disableBtn: '禁用', userTopUp: '用户充值', currentBalanceYuan: '当前余额',
     topupAmount: '充值金额 (元)', confirmTopUp: '确认充值',
+    userUsage: '用量', userUsageDetail: '用户用量详情',
+    selectUser: '选择用户',
+    modelSummary: '模型汇总', usageLogs: '调用日志',
+    totalCost: '总费用', perModelUsage: '(分模型)',
     // Plans management
     planManagement: '套餐管理', createPlan: '+ 新建套餐',
     newPlan: '新建套餐', planName: '套餐名称', priceYuan: '价格 (元)',
@@ -181,7 +186,8 @@ const messages = {
     adminDashboard: 'Dashboard', adminSuppliers: 'Suppliers',
     adminBreakers: 'Circuit Breakers', adminUsers: 'Users', adminPlans: 'Plans',
     adminUsage: 'Usage Logs',
-        adminUserDaily: 'User Daily Usage', adminBackToUser: 'Back to User', adminPanel: 'Admin Panel',
+        adminUserDaily: 'User Daily Usage',
+    adminUserUsage: 'User Model Usage', adminBackToUser: 'Back to User', adminPanel: 'Admin Panel',
     // Login
     loginTitle: 'Login', loginSubtitle: 'Make Coding Easier', username: 'Username',
     password: 'Password', rememberMe: 'Remember Me', forgotPassword: 'Forgot Password?',
@@ -328,6 +334,10 @@ const messages = {
     topupBtn: 'Top Up', enableBtn: 'Enable', disableBtn: 'Disable',
     userTopUp: 'User Top Up', currentBalanceYuan: 'Current Balance',
     topupAmount: 'Amount (Yuan)', confirmTopUp: 'Confirm',
+    userUsage: 'Usage', userUsageDetail: 'User Usage Detail',
+    selectUser: 'Select User',
+    modelSummary: 'Model Summary', usageLogs: 'Usage Logs',
+    totalCost: 'Total Cost', perModelUsage: '(per Model)',
     // Plans management
     planManagement: 'Plan Management', createPlan: '+ Create Plan',
     newPlan: 'New Plan', planName: 'Plan Name', priceYuan: 'Price (CNY)',

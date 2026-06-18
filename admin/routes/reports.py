@@ -1,5 +1,6 @@
+import uuid
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -424,6 +425,135 @@ async def all_usage(
             }
             for log in logs
         ],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+    }
+
+
+@router.get("/user-usage-summary")
+async def user_usage_summary(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, le=100),
+    _admin: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Aggregated usage per user. One row per user with total calls, tokens, cost."""
+    base = select(
+        UsageLog.user_id,
+        User.username,
+        User.email,
+        func.count(UsageLog.id).label("calls"),
+        func.count(UsageLog.id).filter(UsageLog.status == "success").label("success_calls"),
+        func.coalesce(func.sum(UsageLog.prompt_tokens), 0).label("prompt_tokens"),
+        func.coalesce(func.sum(UsageLog.completion_tokens), 0).label("completion_tokens"),
+        func.coalesce(func.sum(UsageLog.bill_cost), 0).label("cost"),
+        func.max(UsageLog.created_at).label("last_used"),
+    ).join(User, UsageLog.user_id == User.id).group_by(UsageLog.user_id, User.username, User.email)
+
+    count_q = select(func.count()).select_from(base.subquery())
+    total = (await db.execute(count_q)).scalar() or 0
+
+    offset = (page - 1) * page_size
+    result = await db.execute(
+        base.order_by(text("cost DESC")).limit(page_size).offset(offset)
+    )
+    return {
+        "items": [
+            {
+                "user_id": str(r.user_id),
+                "username": r.username,
+                "email": r.email,
+                "calls": r.calls,
+                "success": r.success_calls,
+                "prompt_tokens": r.prompt_tokens,
+                "completion_tokens": r.completion_tokens,
+                "total_tokens": r.prompt_tokens + r.completion_tokens,
+                "cost_yuan": round(r.cost / 100, 2),
+                "last_used": r.last_used.isoformat() if r.last_used else None,
+            }
+            for r in result
+        ],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+    }
+
+
+@router.get("/user-model-usage/{user_id}")
+async def user_model_usage(
+    user_id: str,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, le=100),
+    _admin: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Per-model aggregated stats + paginated detailed logs for a specific user."""
+    try:
+        uid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail={"error": "invalid_user_id"})
+
+    # Per-model aggregation
+    model_result = await db.execute(
+        select(
+            UsageLog.model,
+            func.count(UsageLog.id).label("calls"),
+            func.count(UsageLog.id).filter(UsageLog.status == "success").label("success"),
+            func.coalesce(func.sum(UsageLog.prompt_tokens), 0).label("prompt_tokens"),
+            func.coalesce(func.sum(UsageLog.completion_tokens), 0).label("completion_tokens"),
+            func.coalesce(func.sum(UsageLog.bill_cost), 0).label("cost"),
+        )
+        .where(UsageLog.user_id == uid)
+        .group_by(UsageLog.model)
+        .order_by(text("cost DESC"))
+    )
+    models = [
+        {
+            "model": r.model,
+            "calls": r.calls,
+            "success": r.success,
+            "prompt_tokens": r.prompt_tokens,
+            "completion_tokens": r.completion_tokens,
+            "cost_yuan": round(r.cost / 100, 2),
+        }
+        for r in model_result
+    ]
+
+    # Detailed logs (paginated)
+    offset = (page - 1) * page_size
+    count_result = await db.execute(
+        select(func.count(UsageLog.id)).where(UsageLog.user_id == uid)
+    )
+    total = count_result.scalar() or 0
+
+    log_result = await db.execute(
+        select(UsageLog)
+        .where(UsageLog.user_id == uid)
+        .order_by(UsageLog.created_at.desc())
+        .limit(page_size)
+        .offset(offset)
+    )
+    logs = [
+        {
+            "id": str(log.id),
+            "request_id": log.request_id,
+            "model": log.model,
+            "provider": log.provider,
+            "prompt_tokens": log.prompt_tokens,
+            "completion_tokens": log.completion_tokens,
+            "total_tokens": log.prompt_tokens + log.completion_tokens,
+            "cost_yuan": round(log.bill_cost / 100, 4),
+            "latency_ms": log.latency_ms,
+            "status": log.status,
+            "created_at": log.created_at.isoformat(),
+        }
+        for log in log_result.scalars().all()
+    ]
+
+    return {
+        "models": models,
+        "logs": logs,
         "total": total,
         "page": page,
         "page_size": page_size,

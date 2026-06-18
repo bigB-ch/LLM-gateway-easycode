@@ -123,6 +123,12 @@ export const api = {
     return request(`/reports/user-daily?${params}`)
   },
 
+  getUserUsageSummary: (page = 1, pageSize = 20) =>
+    request(`/reports/user-usage-summary?page=${page}&page_size=${pageSize}`),
+
+  getUserModelUsage: (userId, page = 1, pageSize = 20) =>
+    request(`/reports/user-model-usage/${userId}?page=${page}&page_size=${pageSize}`),
+
   getAnnouncements: () => request('/system/announcements'),
 
   listAnnouncements: () => request('/system/admin/announcements'),

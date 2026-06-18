@@ -27,6 +27,7 @@ import Payments from './pages/Payments.vue'
 import Pricing from './pages/Pricing.vue'
 import Announcements from './pages/Announcements.vue'
 import AdminUserDaily from './pages/AdminUserDaily.vue'
+import AdminUserUsage from './pages/AdminUserUsage.vue'
 
 const routes = [
   // Public
@@ -65,6 +66,7 @@ const routes = [
       { path: 'pricing', component: Pricing },
       { path: 'announcements', component: Announcements },
       { path: 'user-daily', component: AdminUserDaily },
+      { path: 'user-usage', component: AdminUserUsage },
     ],
   },
 

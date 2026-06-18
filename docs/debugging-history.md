@@ -14,6 +14,10 @@
 5. [docker-compose.yml 本地与服务器不一致](#5-docker-composeyml-本地与服务器不一致)
 6. [本地文件加密问题（DLP/Esafenet）](#6-本地文件加密问题dlpesafenet)
 7. [常见问题速查](#7-常见问题速查)
+8. [流式超时问题（Claude Code CLI 3s 限制）](#8-流式超时问题claude-code-cli-3s-限制)
+9. [域名迁移与数据丢失事件](#9-域名迁移与数据丢失事件2026-06-18-第七轮)
+10. [注册与支付功能修复](#10-第九轮注册与支付功能修复2026-06-18-下午)
+11. [消费记录修复与用户分模型用量](#11-第十轮消费记录修复与用户分模型用量2026-06-18-后段)
 
 ---
 
@@ -902,7 +906,56 @@ docker compose down -v
 
 ---
 
-| 日期 | 内容 |
+## 11. 第十轮：消费记录修复与用户分模型用量（2026-06-18 后段）
+
+### 11.1 消费记录不更新
+
+**现象**: 客户端使用日志为空，usage_logs 表无新数据写入。
+
+**根因**: `admin/consumer.py` 有两个 bug：
+
+| Bug | 位置 | 错误代码 | 修复 |
+|-----|------|---------|------|
+| `json.loads` 入参类型错误 | consumer.py:141 | `json.loads(data)` — Redis `xreadgroup()` 返回 dict 而非 JSON 字符串 | 改为直接使用 `data` |
+| INSERT 缺 `id` 列 | batch_insert 部分 | raw SQL INSERT 未提供 `id` 字段，PG 的 UUID 列无默认值（SQLAlchemy ORM 的 `default=uuid.uuid4()` 不作用于 raw SQL） | 添加 `str(uuid.uuid4())` |
+
+**验证**: 修复后 32+ 条记录正常写入。
+
+### 11.2 user-daily 端点未部署到服务器
+
+**现象**: 管理端「用户每日用量」页面无数据。
+
+**根因**: 服务器上的 `reports.py` 只有 7 个路由，缺少 `user-daily`。本地有但从未上传。
+
+**修复**: 上传最新 `reports.py` → `docker compose build admin` → `docker compose up -d admin`。
+
+### 11.3 新增用户分模型用量功能
+
+**需求**: 查看每个用户在各模型上的详细用量和费用。
+
+**新增 API**:
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/admin/api/reports/user-usage-summary` | 所有用户 GROUP BY user_id 用量汇总（分页） |
+| GET | `/admin/api/reports/user-model-usage/{user_id}` | 单用户 GROUP BY model 用量 + 分页详细日志 |
+
+**前端页面**:
+- `AdminUserUsage.vue` — 侧边栏「用量日志 → 用户分模型用量」
+  - 全量用户汇总表（用户名、邮箱、调用次数、Token、费用、最后使用时间）
+  - 点击「详情」弹出模态框，展示分模型汇总 + 分页详细调用日志
+- `AdminUserDaily.vue` — 用户每日用量页面（已有但未部署）
+
+**涉及文件**: `reports.py`, `api.js`, `AdminUserUsage.vue`, `router.js`, `AdminLayout.vue`
+
+### 11.4 构建问题
+
+**前端构建失败**：Rollup 报 `Could not resolve "./pages/AdminUserDaily.vue"`。原因是 `AdminUserDaily.vue` 在本地存在但未上传到服务器。上传后 `--no-cache` 构建成功，JS bundle hash 从 `qFSAAR6n` 变为 `DwX9YDYe`。
+
+**经验**: 引用新页面文件到 router.js 后，必须确保该文件在服务器上也存在，否则 Vite/Rollup 构建会报错。
+
+---
+
 |------|------|
 | 2026-06-16 | 始建文档，记录流式问题排查过程 |
 | 2026-06-17 | 补充熔断器、模型映射、nginx 头污染、docker-compose 差异、DLP 加密、常见问题速查 |
@@ -915,3 +968,4 @@ docker compose down -v
 | 2026-06-18 (第八轮) | 建立企业级数据保护体系 |
 | 2026-06-18 (第九轮) | 注册失败、容器重启、余额查询报错、收款码配置等问题修复 |
 | 2026-06-18 (最终确认) | **流式问题确认已解决**；GitHub 仓库配置完成 |
+| 2026-06-18 (第十轮) | Consumer 消费记录 bug 修复、user-daily 部署到服务器、新增用户分模型用量页面 |
