@@ -749,6 +749,110 @@ docker compose down -v
 | 2026-06-17 (第五轮) | 抓到 CLI 完整请求头；发现 messages 转换丢弃 tool_use/tool_result；修复原始 messages 透传；转发 anthropic-beta/thinking |
 | 2026-06-18 (第六轮) | **找到根本原因**：Claude Code CLI 3s 超时 vs 大型请求 3.5+s 处理时间；部署 SSE 逐行 yield 优化 |
 | 2026-06-18 (第七轮) | 域名迁移、FAQ 更新、配置检查、**数据丢失事件** |
-| 2026-06-18 (第八轮) | **完整日总结**：建立企业级数据保护体系、9层防护、5份文档、7个脚本、6次提交 |
-| 2026-06-18 (第六轮) | **找到根本原因**：Claude Code CLI 3s 超时 vs 大型请求 3.5+s 处理时间；部署 SSE 逐行 yield 优化 |
+| 2026-06-18 (第八轮) | 建立企业级数据保护体系 |
+| 2026-06-18 (第九轮) | 注册失败、容器重启、余额查询报错、收款码配置等问题修复 |
+
+---
+
+## 10. 第九轮：注册与支付功能修复（2026-06-18 下午）
+
+### 10.1 注册功能失败
+
+**现象**: 用户访问 `/register` 后点击注册，提示"请稍后重试"。
+
+**根本原因**: `admin/routes/system.py` 第 41 行语法错误。`_DEFAULT_FAQ` 列表中的中文字符串经过 Safenet DLP 加密/解密和编码转换后产生了非法字符，Python 解析失败，admin 容器无法启动。
+
+**排查过程**:
+1. 查看 admin 容器日志，定位到 `SyntaxError: invalid syntax` 在 system.py 第 41 行
+2. 多次尝试修改 FAQ 字符串，但 `git checkout` 恢复的是加密版本，每次还原后问题依旧
+3. 发现文件被 Safenet 加密，无法通过 git 拿到可读版本
+4. 最终直接重写 system.py，移除 FAQ 代码，只保留公告系统功能
+
+**修复**: 重写 `admin/routes/system.py`，`_DEFAULT_FAQ = []`，Python 语法验证通过后重建镜像。
+
+**结果**: ✅ admin 容器启动，注册恢复正常
+
+---
+
+### 10.2 容器反复无法启动/网站宕机
+
+**现象**: 代码修复后重建镜像，但 admin 容器持续 `Restarting`，网站间歇无法访问。
+
+**根本原因**:
+- 多个后台构建任务并发，互相干扰
+- 旧镜像没有被彻底清除，重建后容器仍用旧代码
+- `docker compose build` 受缓存影响
+
+**修复**: 停止所有容器 → 强制删除全部 llm-gateway 镜像 → `docker compose build --no-cache` 完整重建 → 统一启动。
+
+**结果**: ✅ 6 个容器稳定运行
+
+---
+
+### 10.3 供应商余额查询报 not_supported
+
+**现象**: 管理后台添加 DeepSeek 供应商后，查询余额返回 `not_supported` 错误。
+
+**根本原因**: `gateway/admin_routes.py` 中，当 `adapter.get_balance()` 返回 `None` 时直接返回 `not_supported`，没有降级到已存储的缓存余额。用户在配置供应商时 base_url 填写有误，导致 API 请求失败。
+
+**修复**:
+1. 修改 `gateway/admin_routes.py`：`get_balance()` 返回 None 时改为返回 Redis 中存储的缓存余额，附加 `"cached": true` 标记
+2. 用户修正 base_url 配置
+
+**结果**: ✅ 余额查询正常
+
+---
+
+### 10.4 供应商配置"消失"
+
+**现象**: 刷新管理页面后，供应商列表为空。
+
+**根本原因**: 重建过程中 gateway 镜像被删除但未重建，gateway 容器缺失，前端无法拉取供应商列表。供应商配置本身在 Redis 中完整保存。
+
+**修复**: 重建并启动 gateway 容器。
+
+**结果**: ✅ 供应商配置正常显示
+
+---
+
+### 10.5 充值收款码重启后丢失
+
+**现象**: 容器重启后，之前配置的收款码消失。
+
+**根本原因**: `recharge_records` 表缺少 `qr_code` 和 `out_trade_no` 字段，生成的收款码只返回给前端，未写入数据库。
+
+**修复**:
+1. 直接 `ALTER TABLE` 添加字段：`qr_code VARCHAR`、`out_trade_no VARCHAR(64)`
+2. 修改 `admin/routes/plans.py`：创建充值记录时同时保存 qr_code 和 out_trade_no
+
+**结果**: ✅ 收款码持久化保存，重启不丢失
+
+---
+
+### 10.6 客户端充值页面看不到收款码
+
+**现象**: 用户点击充值，弹窗中没有收款码图片。
+
+**根本原因**: 之前重写 system.py 时，无意删除了 `GET /payment-config` 和 `PUT /payment-config` 两个接口，前端调用返回 404，收款码 URL 无法加载。
+
+另外发现：服务器没有配置远程 Git 仓库，本地 commit 无法通过 `git pull` 同步到服务器。
+
+**修复**:
+1. nginx.conf 新增 `/static/` 路径，映射到 nginx html 目录
+2. 数据库直接写入 payment_config（alipay_qr_url、wechat_qr_url）
+3. 重写 system.py，补回 `GET /payment-config` 和 `PUT /payment-config`
+4. 通过 SFTP 上传文件到服务器，重建 admin 容器
+
+**结果**: ✅ 收款码正常显示，充值流程完整可用
+
+---
+
+### 10.7 经验教训
+
+| 教训 | 说明 |
+|------|------|
+| 修改文件前评估影响范围 | 重写 system.py 修复语法错误时，未注意到同文件中还有其他接口，导致连锁故障 |
+| 服务器部署流程需改进 | 服务器无远程 Git，只能 SFTP 上传，应配置 CI/CD 或远程仓库 |
+| Docker 镜像缓存问题 | 代码修改后必须确认镜像已重建，否则容器仍运行旧代码 |
+| 业务数据必须持久化 | 生成的收款码、交易号等必须第一时间写入数据库，不能只依赖内存
 | 2026-06-18 (第七轮) | 域名迁移、FAQ 更新、配置检查、**数据丢失事件** |
