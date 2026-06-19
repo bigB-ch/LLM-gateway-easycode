@@ -43,7 +43,7 @@
     <n-alert v-if="error" type="error" :bordered="true" closable @close="error = ''">{{ error }}</n-alert>
 
     <n-space :size="10">
-      <n-input v-model:value="inputMessage" type="textarea" rows="3" :placeholder="t('inputMsgHint')" :disabled="loading || !selectedModel" style="flex:1" @keydown.enter.exact.prevent="sendMessage" />
+      <n-input v-model:value="inputMessage" type="textarea" rows="1" :placeholder="selectedModel ? t('inputMsgHint') : '请先选择模型'" :disabled="loading || !selectedModel" style="flex:1;min-height:44px" @keydown.enter.exact.prevent="sendMessage" />
       <n-button type="primary" :loading="loading" :disabled="loading || !selectedModel || !inputMessage.trim()" @click="sendMessage" style="padding:12px 28px;font-size:14px;align-self:flex-end">
         {{ loading ? t('sending') : t('send') }}
       </n-button>
