@@ -581,12 +581,30 @@ a:hover { color: var(--primary-hover); }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(170deg, #f8f9fb 0%, #f3f4f9 100%);
+  background: linear-gradient(170deg, #f0f2f8 0%, #e8ebf5 50%, #f3f4f9 100%);
+  background-size: 200% 200%;
+  animation: authBgShift 12s ease-in-out infinite;
   position: relative;
   overflow: hidden;
 }
 
-/* Layer 1: large soft glow top-left */
+@keyframes authBgShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+html.dark .auth-page {
+  background: linear-gradient(170deg, #0b1120 0%, #0f1a2e 50%, #0b1120 100%);
+  background-size: 200% 200%;
+  animation: authBgShiftDark 15s ease-in-out infinite;
+}
+
+@keyframes authBgShiftDark {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Layer 1: large soft glow top-left - floating */
 .auth-page::before {
   content: '';
   position: absolute;
@@ -594,12 +612,19 @@ a:hover { color: var(--primary-hover); }
   left: -100px;
   width: 560px;
   height: 560px;
-  background: radial-gradient(circle, rgba(99,102,241,0.14) 0%, rgba(99,102,241,0.04) 50%, transparent 70%);
+  background: radial-gradient(circle, rgba(99,102,241,0.16) 0%, rgba(99,102,241,0.04) 50%, transparent 70%);
   border-radius: 50%;
   pointer-events: none;
+  animation: authFloat1 8s ease-in-out infinite;
 }
 
-/* Layer 2: warm glow bottom-right */
+@keyframes authFloat1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, 20px) scale(1.05); }
+  66% { transform: translate(-20px, -10px) scale(0.95); }
+}
+
+/* Layer 2: warm glow bottom-right - floating */
 .auth-page::after {
   content: '';
   position: absolute;
@@ -607,12 +632,18 @@ a:hover { color: var(--primary-hover); }
   right: -80px;
   width: 640px;
   height: 640px;
-  background: radial-gradient(circle, rgba(139,92,246,0.12) 0%, rgba(139,92,246,0.03) 50%, transparent 70%);
+  background: radial-gradient(circle, rgba(139,92,246,0.14) 0%, rgba(139,92,246,0.03) 50%, transparent 70%);
   border-radius: 50%;
   pointer-events: none;
+  animation: authFloat2 10s ease-in-out infinite;
 }
 
-/* Layer 3: geometric ring top-right */
+@keyframes authFloat2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-40px, 20px) scale(1.08); }
+}
+
+/* Layer 3: geometric ring top-right - spins slowly */
 .auth-geo-ring {
   position: absolute;
   top: -100px;
@@ -622,9 +653,15 @@ a:hover { color: var(--primary-hover); }
   border: 2px solid rgba(99,102,241,0.14);
   border-radius: 50%;
   pointer-events: none;
+  animation: authSpin 30s linear infinite;
 }
 
-/* Layer 4: smaller ring bottom-left */
+@keyframes authSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Layer 4: smaller ring bottom-left - rotates opposite */
 .auth-geo-dot {
   position: absolute;
   bottom: -60px;
@@ -634,9 +671,15 @@ a:hover { color: var(--primary-hover); }
   border: 2px dashed rgba(139,92,246,0.15);
   border-radius: 50%;
   pointer-events: none;
+  animation: authSpinReverse 25s linear infinite;
 }
 
-/* Layer 5: subtle bar across */
+@keyframes authSpinReverse {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+
+/* Layer 5: subtle bar across - pulse */
 .auth-geo-bar {
   position: absolute;
   top: 30%;
@@ -646,9 +689,10 @@ a:hover { color: var(--primary-hover); }
   background: linear-gradient(to left, rgba(99,102,241,0.16), transparent);
   pointer-events: none;
   border-radius: 1px;
+  animation: authPulse 4s ease-in-out infinite;
 }
 
-/* Layer 6: another bar */
+/* Layer 6: another bar - pulse */
 .auth-geo-bar2 {
   position: absolute;
   bottom: 28%;
@@ -658,6 +702,12 @@ a:hover { color: var(--primary-hover); }
   background: linear-gradient(to right, rgba(139,92,246,0.14), transparent);
   pointer-events: none;
   border-radius: 1px;
+  animation: authPulse 5s ease-in-out infinite reverse;
+}
+
+@keyframes authPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
 }
 
 .auth-topbar {
