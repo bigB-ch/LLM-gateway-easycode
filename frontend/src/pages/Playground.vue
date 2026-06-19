@@ -1,32 +1,23 @@
 <template>
-  <div style="display:flex;flex-direction:column;height:calc(100vh - 56px - 48px)">
-    <n-h1 style="margin-bottom:16px">Playground</n-h1>
+  <div style="display:flex;flex-direction:column;height:calc(100vh - 56px - 48px);max-width:960px;margin:0 auto;width:100%">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <h1 style="font-size:20px;font-weight:600;margin:0">Playground</h1>
+      <n-button size="tiny" quaternary @click="clearChat" style="color:var(--text-muted)">清空对话</n-button>
+    </div>
 
-    <n-card :bordered="true" size="small" style="margin-bottom:16px">
-      <n-space align="flex-end" wrap :size="16">
-        <n-form-item label="模型" style="min-width:200px">
-          <n-select v-model:value="selectedModel" :options="modelOptions" :placeholder="t('selectModel')" />
-        </n-form-item>
-        <n-form-item :label="'Temperature: ' + temperature">
-          <n-slider v-model:value="temperature" :min="0" :max="2" :step="0.1" style="width:120px" />
-        </n-form-item>
-        <n-form-item label="Max Tokens">
-          <n-input-number v-model:value="maxTokens" :min="1" placeholder="默认" style="width:110px" />
-        </n-form-item>
-        <n-button @click="clearChat">{{ t('clear') }}</n-button>
-      </n-space>
-    </n-card>
-
-    <div ref="chatArea" class="card card-padded" style="flex:1;overflow-y:auto;margin-bottom:12px">
-      <n-empty v-if="messages.length === 0" :description="t('playgroundHint')" style="padding-top:60px">
+    <div ref="chatArea" style="flex:1;overflow-y:auto;padding:16px 0;margin-bottom:12px">
+      <n-empty v-if="messages.length === 0" :description="t('playgroundHint')" style="padding-top:80px">
         <template #extra>
-          <n-text depth="3" style="font-size:12px">{{ t('modelListHint') }}</n-text>
+          <div style="margin-top:8px">
+            <n-select v-model:value="selectedModel" :options="modelOptions" :placeholder="'-- 选择模型 --'" style="width:240px;margin:0 auto" />
+          </div>
+          <n-text depth="3" style="font-size:12px;display:block;margin-top:8px">{{ t('modelListHint') }}</n-text>
         </template>
       </n-empty>
       <div v-for="(msg, i) in messages" :key="i" :style="{display:'flex',justifyContent:msg.role==='user'?'flex-end':'flex-start',marginBottom:'16px'}">
-        <div style="max-width:75%;padding:12px 16px;border-radius:var(--radius);background:msg.role==='user'?'var(--primary)':'var(--surface)';color:msg.role==='user'?'#fff':'var(--text)';border:1px solid var(--border-light);line-height:1.6;white-space:pre-wrap;word-break:break-word">
+        <div style="max-width:75%;padding:12px 16px;border-radius:12px;background:msg.role==='user'?'var(--primary)':'var(--surface)';color:msg.role==='user'?'#fff':'var(--text)';border:1px solid var(--border-light);line-height:1.6;white-space:pre-wrap;word-break:break-word;box-shadow:0 1px 3px rgba(0,0,0,0.05)">
           <div v-if="msg.role !== 'error'" style="font-size:11px;margin-bottom:4px;opacity:0.6;font-weight:500">
-            {{ msg.role === 'user' ? 'You' : selectedModel }}
+            {{ msg.role === 'user' ? 'You' : (selectedModel || 'Assistant') }}
           </div>
           {{ msg.content }}
           <div v-if="msg.usage" style="margin-top:8px;font-size:11px;opacity:0.6">
@@ -35,27 +26,27 @@
           </div>
         </div>
       </div>
-      <div v-if="loading" style="margin-bottom:16px">
-        <div style="padding:12px 16px;border-radius:var(--radius);background:var(--surface);border:1px solid var(--border-light);color:var(--text-muted);max-width:75%">{{ t('thinking') }}</div>
+      <div v-if="loading" style="margin-bottom:16px;display:flex;justify-content:flex-start">
+        <div style="padding:12px 16px;border-radius:12px;background:var(--surface);border:1px solid var(--border-light);color:var(--text-muted);max-width:75%">{{ t('thinking') }}</div>
       </div>
     </div>
 
-    <n-alert v-if="error" type="error" :bordered="true" closable @close="error = ''">{{ error }}</n-alert>
+    <n-alert v-if="error" type="error" :bordered="true" closable @close="error = ''" style="margin-bottom:8px;font-size:12px">{{ error }}</n-alert>
 
-    <n-space :size="10">
-      <n-input v-model:value="inputMessage" type="textarea" rows="1" :placeholder="selectedModel ? t('inputMsgHint') : '请先选择模型'" :disabled="loading || !selectedModel" style="flex:1;min-height:44px" @keydown.enter.exact.prevent="sendMessage" />
-      <n-button type="primary" :loading="loading" :disabled="loading || !selectedModel || !inputMessage.trim()" @click="sendMessage" style="padding:12px 28px;font-size:14px;align-self:flex-end">
+    <div style="display:flex;gap:10px;align-items:flex-end;background:var(--surface);border:1px solid var(--border-light);border-radius:12px;padding:12px;margin-bottom:16px">
+      <n-select v-if="!selectedModel && messages.length > 0" v-model:value="selectedModel" :options="modelOptions" :placeholder="'-- 选择模型 --'" style="width:180px" />
+      <n-input v-model:value="inputMessage" type="textarea" rows="2" :placeholder="selectedModel ? t('inputMsgHint') : '请先选择模型'" :disabled="loading || !selectedModel" style="flex:1;min-height:44px;font-size:14px" @keydown.enter.exact.prevent="sendMessage" />
+      <n-button type="primary" :loading="loading" :disabled="loading || !selectedModel || !inputMessage.trim()" @click="sendMessage" style="height:44px;padding:0 24px;font-size:14px;border-radius:8px">
         {{ loading ? t('sending') : t('send') }}
       </n-button>
-    </n-space>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
 import {
-  NCard, NButton, NEmpty, NFormItem, NH1, NInput, NInputNumber,
-  NSelect, NSlider, NSpace, NText, NAlert,
+  NButton, NEmpty, NInput, NSelect, NText, NAlert,
 } from 'naive-ui'
 import { gatewayApi } from '../gatewayApi'
 import { useI18n } from '../i18n'
