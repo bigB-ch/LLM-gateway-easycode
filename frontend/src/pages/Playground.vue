@@ -1,5 +1,5 @@
 <template>
-  <div style="display:flex;flex-direction:column;height:calc(100vh - 56px - 48px);max-width:960px;margin:0 auto;width:100%">
+  <div style="display:flex;flex-direction:column;height:calc(100vh - 56px - 48px);width:100%">
 
     <!-- Top: Model selector bar -->
     <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border-light);margin-bottom:12px">
