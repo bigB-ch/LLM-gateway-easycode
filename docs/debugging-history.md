@@ -1085,3 +1085,16 @@ docker compose down -v
 ### 11.5 前端部署流程
 
 - 因服务器内存不足改为：本地构建 → SFTP 上传 → docker cp 到容器
+
+### 11.6 网站宕机事件（index.html 被清空）
+
+**现象**: 部署前端更新后，网站 HTTP 200 但页面白屏，跨设备均无法访问。
+
+**根本原因**: `docker cp` 将空的 index.html 写入前端容器，覆盖了正常文件。
+
+**修复**: 使用 `docker exec -i ... cat > file` 直接写入容器：
+```bash
+docker exec -i llm-gateway-frontend-1 sh -c "cat > /usr/share/nginx/html/index.html" < index.html
+```
+
+**教训**: `docker cp` 可能写入空文件，推荐使用 `docker exec -i cat >` 方式，部署后必须验证文件完整性。
