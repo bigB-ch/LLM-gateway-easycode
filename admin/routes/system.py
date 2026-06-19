@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from database import get_db
 from models.system_config import SystemConfig
 from dependencies import get_current_user, require_admin
+import redis_client
 
 router = APIRouter(prefix="/admin/api/system", tags=["system"])
 
@@ -137,3 +138,50 @@ async def save_payment_config(
         db.add(cfg)
     await db.commit()
     return {"message": "saved", "config": cfg.value if cfg else value}
+
+
+@router.get("/pricing")
+async def get_pricing(db: AsyncSession = Depends(get_db)):
+    """Get current model pricing config. Falls back to defaults if not customized."""
+    result = await db.execute(select(SystemConfig).where(SystemConfig.key == "model_pricing"))
+    cfg = result.scalar_one_or_none()
+    if cfg and cfg.value:
+        return {"data": cfg.value}
+    from pathlib import Path
+    import sys
+    gateway_pricing = Path(__file__).parent.parent.parent / "gateway" / "pricing.py"
+    sys.path.insert(0, str(gateway_pricing.parent))
+    from pricing import PRICING, MARKUP
+    sys.path.pop(0)
+    return {"data": {"models": PRICING, "markup": MARKUP}}
+
+
+@router.put("/pricing")
+async def save_pricing(
+    req: dict,
+    _admin: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Save model pricing config. Accepts {"models": {...}, "markup": 1.5}."""
+    result = await db.execute(select(SystemConfig).where(SystemConfig.key == "model_pricing"))
+    cfg = result.scalar_one_or_none()
+
+    value = {
+        "models": req.get("models", {}),
+        "markup": req.get("markup", 1.5),
+    }
+    if cfg:
+        cfg.value = value
+    else:
+        cfg = SystemConfig(key="model_pricing", value=value)
+        db.add(cfg)
+    await db.commit()
+
+    import json
+    try:
+        r = redis_client.redis
+        await r.set("pricing_config", json.dumps(value), ex=86400)
+    except Exception:
+        pass
+
+    return {"message": "saved", "data": value}
