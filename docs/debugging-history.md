@@ -1025,6 +1025,16 @@ docker compose down -v
 
 ✅ **全部 20 个页面已迁移完毕**。CSS bundle 从 25KB 降至 19.5KB，JS bundle 稳定在 1.08MB (298KB gzip)。后续可考虑 chunk 拆包优化。
 
+### 12.8 Playwright MCP 安装（2026-06-20）
+
+用于 UI 设计参考和自动截图验证。
+
+- **MCP Server**: `@playwright/mcp` v0.0.76（npm 全局安装）
+- **浏览器**: Chromium（已安装）
+- **配置**: 项目根 `.mcp.json`，`allowed-hosts: *`
+- **用途**: 打开参考网站截图分析 UI 设计、自动化 UI 测试
+- **使用方式**: 重启会话后批准 MCP 服务器，即可调用 Playwright 浏览器工具
+
 ---
 
 |------|------|
@@ -1043,6 +1053,7 @@ docker compose down -v
 | 2026-06-18 (最终确认) | **流式问题确认已解决**；GitHub 仓库配置完成 |
 | 2026-06-18 (第十轮) | Consumer 消费记录 bug 修复、user-daily 部署到服务器、新增用户分模型用量页面 |
 | 2026-06-18 (第十二轮) | UI 美化：Naive UI 迁移完成，全部 20 个页面已改造 |
+| 2026-06-20 (第十三轮) | 安装 Playwright MCP (@playwright/mcp)，用于 UI 设计参考和截图验证 |
 | 2026-06-19 (第十一轮) | 定价管理修复、Playground 重设计、登录页动效、SMTP 配置 |
 | 2026-06-20 (第十二轮) | API Key 管理页改造：新增 API 调用弹窗（代码生成 + AI 工具接入）、导航栏和侧边栏调整、术语统一为 API Key |
 
