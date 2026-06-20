@@ -8,6 +8,7 @@
           <router-link to="/"><span class="nav-icon">&#x25A3;</span> <span>{{ t('dashboard') }}</span></router-link>
           <router-link to="/keys"><span class="nav-icon">&#x1F511;</span> <span>{{ t('tokens') }}</span></router-link>
           <router-link to="/usage"><span class="nav-icon">&#x1F4C4;</span> <span>{{ t('usage') }}</span></router-link>
+          <router-link to="/models"><span class="nav-icon">&#x1F310;</span> <span>{{ t('marketplace') }}</span></router-link>
         </nav>
 
         <div class="sidebar-section">{{ t('personalGroup') }}</div>

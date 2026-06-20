@@ -101,8 +101,8 @@ html.dark .badge-warning { background: rgba(217,119,6,0.2); color: #fcd34d; }
 html.dark .auth-page { background: #0b1120; }
 html.dark .auth-card { background: #1e293b; }
 html.dark .auth-topbar { background: transparent; }
-html.dark .auth-logo .brand-text { color: #e2e8f0; }
-html.dark .brand-accent { color: #818cf8; }
+html.dark .auth-logo .brand-text { color: #ffffff; }
+html.dark .brand-accent { color: #a5f3fc; }
 
 /* ── Dark: Macaron cards ── */
 html.dark .mc-blue .stat-icon { background: rgba(91,155,213,0.15); color: #93c5fd; }
@@ -581,133 +581,144 @@ a:hover { color: var(--primary-hover); }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(170deg, #f0f2f8 0%, #e8ebf5 50%, #f3f4f9 100%);
-  background-size: 200% 200%;
-  animation: authBgShift 12s ease-in-out infinite;
+  background: linear-gradient(135deg, #2a1f60, #362b70, #403a75);
   position: relative;
   overflow: hidden;
 }
 
-@keyframes authBgShift {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-}
-
-html.dark .auth-page {
-  background: linear-gradient(170deg, #0b1120 0%, #0f1a2e 50%, #0b1120 100%);
-  background-size: 200% 200%;
-  animation: authBgShiftDark 15s ease-in-out infinite;
-}
-
-@keyframes authBgShiftDark {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-}
-
-/* Layer 1: large soft glow top-left - floating */
+/* Animated aurora sweep */
 .auth-page::before {
   content: '';
   position: absolute;
-  top: -120px;
-  left: -100px;
-  width: 560px;
-  height: 560px;
-  background: radial-gradient(circle, rgba(99,102,241,0.16) 0%, rgba(99,102,241,0.04) 50%, transparent 70%);
-  border-radius: 50%;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background:
+    radial-gradient(ellipse 500px 300px at 15% 25%, rgba(147,51,234,0.6) 0%, transparent 50%),
+    radial-gradient(ellipse 400px 400px at 75% 60%, rgba(59,130,246,0.55) 0%, transparent 50%),
+    radial-gradient(ellipse 250px 250px at 40% 70%, rgba(236,72,153,0.45) 0%, transparent 50%);
+  animation: authAurora 5s ease-in-out infinite alternate;
   pointer-events: none;
-  animation: authFloat1 8s ease-in-out infinite;
 }
 
-@keyframes authFloat1 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(30px, 20px) scale(1.05); }
-  66% { transform: translate(-20px, -10px) scale(0.95); }
+@keyframes authAurora {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 0.8; }
+  50% { transform: translate(4%, 3%) rotate(3deg); opacity: 1; }
+  100% { transform: translate(-4%, -2%) rotate(-3deg); opacity: 1; }
 }
 
-/* Layer 2: warm glow bottom-right - floating */
+/* Large floating orb - magenta/pink */
 .auth-page::after {
   content: '';
   position: absolute;
-  bottom: -140px;
-  right: -80px;
-  width: 640px;
-  height: 640px;
-  background: radial-gradient(circle, rgba(139,92,246,0.14) 0%, rgba(139,92,246,0.03) 50%, transparent 70%);
+  bottom: -80px;
+  right: -60px;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(236,72,153,0.35) 0%, rgba(236,72,153,0.12) 40%, transparent 70%);
   border-radius: 50%;
   pointer-events: none;
-  animation: authFloat2 10s ease-in-out infinite;
+  animation: authOrb1 8s ease-in-out infinite;
 }
 
-@keyframes authFloat2 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(-40px, 20px) scale(1.08); }
+@keyframes authOrb1 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+  50% { transform: translate(-80px, -40px) scale(1.4); opacity: 1; }
 }
 
-/* Layer 3: geometric ring top-right - spins slowly */
+/* Floating orb - blue */
 .auth-geo-ring {
   position: absolute;
-  top: -100px;
-  right: -100px;
-  width: 400px;
-  height: 400px;
-  border: 2px solid rgba(99,102,241,0.14);
+  top: -120px;
+  right: -60px;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(59,130,246,0.3) 0%, transparent 55%);
   border-radius: 50%;
   pointer-events: none;
-  animation: authSpin 30s linear infinite;
+  animation: authOrb2 7s ease-in-out infinite alternate;
 }
 
-@keyframes authSpin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+@keyframes authOrb2 {
+  from { transform: translate(0, 0) scale(1); opacity: 0.6; }
+  to { transform: translate(50px, 50px) scale(1.3); opacity: 1; }
 }
 
-/* Layer 4: smaller ring bottom-left - rotates opposite */
+/* Floating orb - purple */
 .auth-geo-dot {
   position: absolute;
-  bottom: -60px;
-  left: 8%;
-  width: 200px;
-  height: 200px;
-  border: 2px dashed rgba(139,92,246,0.15);
+  bottom: -80px;
+  left: 2%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(147,51,234,0.3) 0%, transparent 50%);
   border-radius: 50%;
   pointer-events: none;
-  animation: authSpinReverse 25s linear infinite;
+  animation: authOrb3 10s ease-in-out infinite alternate;
 }
 
-@keyframes authSpinReverse {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(-360deg); }
+@keyframes authOrb3 {
+  from { transform: translate(0, 0) scale(1); opacity: 0.5; }
+  to { transform: translate(-40px, 30px) scale(1.5); opacity: 1; }
 }
 
-/* Layer 5: subtle bar across - pulse */
+/* Floating particles - 30 dots */
 .auth-geo-bar {
   position: absolute;
-  top: 30%;
-  right: 0;
-  width: 32%;
-  height: 2px;
-  background: linear-gradient(to left, rgba(99,102,241,0.16), transparent);
+  top: 0; left: 0; right: 0; bottom: 0;
   pointer-events: none;
-  border-radius: 1px;
-  animation: authPulse 4s ease-in-out infinite;
 }
 
-/* Layer 6: another bar - pulse */
-.auth-geo-bar2 {
+.auth-geo-bar::before {
+  content: '';
   position: absolute;
-  bottom: 28%;
-  left: 0;
-  width: 28%;
-  height: 2px;
-  background: linear-gradient(to right, rgba(139,92,246,0.14), transparent);
-  pointer-events: none;
-  border-radius: 1px;
-  animation: authPulse 5s ease-in-out infinite reverse;
+  width: 100%;
+  height: 100%;
+  background-image:
+    radial-gradient(4px 4px at 8% 12%, rgba(255,255,255,0.9) 0%, transparent 100%),
+    radial-gradient(3px 3px at 22% 35%, rgba(167,139,250,0.8) 0%, transparent 100%),
+    radial-gradient(5px 5px at 18% 70%, rgba(255,255,255,0.7) 0%, transparent 100%),
+    radial-gradient(3px 3px at 35% 15%, rgba(167,139,250,0.9) 0%, transparent 100%),
+    radial-gradient(4px 4px at 42% 55%, rgba(255,255,255,0.6) 0%, transparent 100%),
+    radial-gradient(3px 3px at 50% 85%, rgba(167,139,250,0.8) 0%, transparent 100%),
+    radial-gradient(5px 5px at 58% 22%, rgba(255,255,255,0.7) 0%, transparent 100%),
+    radial-gradient(3px 3px at 65% 40%, rgba(167,139,250,0.9) 0%, transparent 100%),
+    radial-gradient(4px 4px at 72% 65%, rgba(255,255,255,0.6) 0%, transparent 100%),
+    radial-gradient(3px 3px at 78% 10%, rgba(167,139,250,0.8) 0%, transparent 100%),
+    radial-gradient(5px 5px at 85% 45%, rgba(255,255,255,0.7) 0%, transparent 100%),
+    radial-gradient(3px 3px at 92% 75%, rgba(167,139,250,0.9) 0%, transparent 100%),
+    radial-gradient(4px 4px at 5% 48%, rgba(255,255,255,0.6) 0%, transparent 100%),
+    radial-gradient(3px 3px at 15% 88%, rgba(167,139,250,0.8) 0%, transparent 100%),
+    radial-gradient(5px 5px at 28% 60%, rgba(255,255,255,0.7) 0%, transparent 100%),
+    radial-gradient(3px 3px at 38% 8%, rgba(167,139,250,0.9) 0%, transparent 100%),
+    radial-gradient(4px 4px at 48% 30%, rgba(255,255,255,0.6) 0%, transparent 100%),
+    radial-gradient(3px 3px at 55% 78%, rgba(167,139,250,0.8) 0%, transparent 100%),
+    radial-gradient(5px 5px at 62% 50%, rgba(255,255,255,0.7) 0%, transparent 100%),
+    radial-gradient(3px 3px at 68% 18%, rgba(167,139,250,0.9) 0%, transparent 100%),
+    radial-gradient(4px 4px at 75% 50%, rgba(255,255,255,0.6) 0%, transparent 100%),
+    radial-gradient(3px 3px at 82% 82%, rgba(167,139,250,0.8) 0%, transparent 100%),
+    radial-gradient(5px 5px at 88% 30%, rgba(255,255,255,0.7) 0%, transparent 100%),
+    radial-gradient(3px 3px at 95% 55%, rgba(167,139,250,0.9) 0%, transparent 100%),
+    radial-gradient(4px 4px at 12% 50%, rgba(255,255,255,0.6) 0%, transparent 100%),
+    radial-gradient(3px 3px at 25% 42%, rgba(167,139,250,0.8) 0%, transparent 100%),
+    radial-gradient(5px 5px at 32% 25%, rgba(255,255,255,0.7) 0%, transparent 100%),
+    radial-gradient(3px 3px at 45% 43%, rgba(167,139,250,0.9) 0%, transparent 100%),
+    radial-gradient(4px 4px at 60% 55%, rgba(255,255,255,0.6) 0%, transparent 100%),
+    radial-gradient(3px 3px at 98% 85%, rgba(167,139,250,0.8) 0%, transparent 100%);
+  animation: authParticles 12s linear infinite;
 }
 
-@keyframes authPulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 1; }
+@keyframes authParticles {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(-50px); opacity: 0.3; }
+}
+
+.auth-geo-bar2 { display: none; }
+
+
+html.dark .auth-page {
+  background: linear-gradient(135deg, #1a1245, #221a55, #302a60);
 }
 
 .auth-topbar {
@@ -731,7 +742,7 @@ html.dark .auth-page {
 .auth-logo .brand-text {
   font-size: 22px;
   font-weight: 700;
-  color: var(--text);
+  color: #ffffff;
 }
 
 .auth-card {
@@ -751,7 +762,7 @@ html.dark .auth-page {
 .auth-card h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; color: var(--text); }
 .auth-card .subtitle { color: var(--text-secondary); font-size: 14px; margin-bottom: 24px; }
 
-.brand-accent { color: var(--primary); }
+.brand-accent { color: #67e8f9; }
 
 .gradient-text {
   font-weight: 700;

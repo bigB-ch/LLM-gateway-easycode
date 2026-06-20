@@ -1044,6 +1044,7 @@ docker compose down -v
 | 2026-06-18 (第十轮) | Consumer 消费记录 bug 修复、user-daily 部署到服务器、新增用户分模型用量页面 |
 | 2026-06-18 (第十二轮) | UI 美化：Naive UI 迁移完成，全部 20 个页面已改造 |
 | 2026-06-19 (第十一轮) | 定价管理修复、Playground 重设计、登录页动效、SMTP 配置 |
+| 2026-06-20 (第十二轮) | API Key 管理页改造：新增 API 调用弹窗（代码生成 + AI 工具接入）、导航栏和侧边栏调整、术语统一为 API Key |
 
 ---
 
@@ -1098,3 +1099,41 @@ docker exec -i llm-gateway-frontend-1 sh -c "cat > /usr/share/nginx/html/index.h
 ```
 
 **教训**: `docker cp` 可能写入空文件，推荐使用 `docker exec -i cat >` 方式，部署后必须验证文件完整性。
+
+
+---
+
+## 12. 第十二轮：API Key 管理改造与导航优化（2026-06-20）
+
+### 12.1 API Key 管理 - API 调用弹窗
+
+在每个 API Key 的操作列新增"API 调用"按钮，点击弹出三步骤对话框：
+
+- **Step 1**: 显示当前 API Key 前缀
+- **Step 2**: 下拉选择目标模型
+- **Step 3: API 接入** — 类似腾讯云 TokenHub 风格的代码生成
+  - 三个 Tab：cURL / Python / Node.js
+  - 自动填入 API Key 和模型名称
+  - 支持一键复制 + 运行测试
+- **Step 3: AI 工具接入** — 折叠面板内的配置参考
+  - Claude Code：环境变量 `ANTHROPIC_API_KEY` + `ANTHROPIC_BASE_URL`
+  - OpenClaw：安装配置
+  - OpenAI SDK：Python 调用示例
+
+### 12.2 导航栏调整
+
+- 顶部导航栏精简为：主页 + 控制台
+- 模型广场从顶部移到侧边栏（控制台下方）
+- 控制台高亮判断增加 /models 路由
+
+### 12.3 术语统一
+
+i18n 中所有"令牌"相关名称改为"API Key"，涉及 20+ 个 key。
+
+| 旧名称 | 新名称 |
+|--------|--------|
+| 令牌管理 | API Key 管理 |
+| 添加令牌 | 添加 API Key |
+| 令牌分组 | API Key 分组 |
+| 暂无令牌 | 暂无 API Key |
+| 创建令牌 | 创建 API Key |

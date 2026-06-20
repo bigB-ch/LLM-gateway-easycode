@@ -1,9 +1,8 @@
 <template>
   <div class="auth-page">
-    <div class="auth-geo-ring"></div><div class="auth-geo-dot"></div><div class="auth-geo-bar"></div><div class="auth-geo-bar2"></div>
+<div class="auth-geo-ring"></div><div class="auth-geo-dot"></div><div class="auth-geo-bar"></div><div class="auth-geo-bar2"></div>
     <div class="auth-topbar">
-      <router-link to="/" class="auth-logo"><LogoIcon :size="48" /><span class="brand-text">Easy<span class="brand-accent">Code</span></span></router-link>
-      <n-button text :title="isDark ? 'Light' : 'Dark'" @click="toggleTheme" style="font-size:20px;color:var(--text-muted)">{{ isDark ? '&#x263E;' : '&#x2600;' }}</n-button>
+      <router-link to="/" class="auth-logo"><LogoIcon :size="64" /><span class="brand-text" style="font-size:26px">Easy<span class="brand-accent">Code</span></span></router-link>
     </div>
     <div class="auth-card auth-card-lg">
       <n-h1>{{ t('registerTitle') }}</n-h1>

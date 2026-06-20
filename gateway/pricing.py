@@ -1,39 +1,7 @@
 # Fallback pricing — overridden by Redis "pricing_config" if admin customizes
 _DEFAULT_PRICING = {
-    # DeepSeek
     "deepseek-v4-flash":  {"prompt": 1,  "completion": 2,   "cache": 0.02},
     "deepseek-v4-pro":    {"prompt": 3,  "completion": 6,   "cache": 0.025},
-    # Qwen / Alibaba
-    "qwen-turbo":         {"prompt": 0.5,"completion": 0.5},
-    "qwen-plus":          {"prompt": 0.8,"completion": 2,   "cache": 0.08},
-    "qwen-max":           {"prompt": 2.8,"completion": 8.4},
-    "qwen3.6-plus":       {"prompt": 2,  "completion": 12,  "cache": 0.2},
-    # Zhipu GLM
-    "glm-4.7":            {"prompt": 0.27,"completion": 1.1, "cache": 0.55},
-    "glm-5":              {"prompt": 0.75,"completion": 2.4},
-    "glm-5.1":            {"prompt": 6,  "completion": 24,  "cache": 1.2},
-    # Moonshot Kimi
-    "kimi-k2.5":          {"prompt": 0.55,"completion": 2.76},
-    "kimi-k2.6":          {"prompt": 6.5,"completion": 27,  "cache": 1.0},
-    # ByteDance Doubao
-    "doubao-seedance-2-0-260128":     {"prompt": 51,"completion": 51},
-    "doubao-seedance-2-0-fast-260128":{"prompt": 37,"completion": 37},
-    # MiniMax
-    "MiniMax-M2.5":       {"prompt": 2.1,"completion": 8.4},
-    # Kuaishou Kling
-    "kling-v1":           {"prompt": 75,"completion": 75},
-    "kling-v1-5":         {"prompt": 75,"completion": 75},
-    "kling-v1-6":         {"prompt": 75,"completion": 75},
-    "kling-video-o1":     {"prompt": 75,"completion": 75},
-    "kling-v2-1":         {"prompt": 0,  "completion": 0,  "per_use": 0.4},
-    "kling-v2-1-master":  {"prompt": 0,  "completion": 0,  "per_use": 2},
-    "kling-v2-master":    {"prompt": 0,  "completion": 0,  "per_use": 1},
-    "kling-v2-5-turbo":   {"prompt": 0,  "completion": 0,  "per_use": 0.3},
-    "kling-v2-6":         {"prompt": 0,  "completion": 0,  "per_use": 1.2},
-    "kling-v3":           {"prompt": 0,  "completion": 0,  "per_use": 1.2},
-    "kling-v3-omni":      {"prompt": 0,  "completion": 0,  "per_use": 1},
-    # Xunfei MaaS
-    "xunfei-qwen": {"prompt": 0.8, "completion": 2},
 }
 _DEFAULT_MARKUP = 1.5
 

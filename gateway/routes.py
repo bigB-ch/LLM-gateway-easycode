@@ -739,18 +739,4 @@ async def list_models():
 
 _KNOWN_MODELS = {
     "deepseek": ["deepseek-v4-flash", "deepseek-v4-pro"],
-    "openai": ["gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4", "gpt-3.5-turbo", "o1", "o3", "o3-mini"],
-    "qwen": ["qwen-plus", "qwen-max", "qwen-turbo", "qwen3.6-plus"],
-    "anthropic": ["claude-sonnet-4-20250514", "claude-3-5-haiku-20241022"],
-    "google": ["gemini-2.5-flash", "gemini-2.5-pro"],
-    "zhipu": ["glm-4.7", "glm-5", "glm-5.1"],
-    "moonshot": ["kimi-k2.5", "kimi-k2.6"],
-    "doubao": ["doubao-seedance-2-0-260128", "doubao-seedance-2-0-fast-260128"],
-    "minimax": ["MiniMax-M2.5"],
-    "kling": [
-        "kling-v1", "kling-v1-5", "kling-v1-6",
-        "kling-v2-1", "kling-v2-1-master", "kling-v2-master",
-        "kling-v2-5-turbo", "kling-v2-6",
-        "kling-v3", "kling-v3-omni", "kling-video-o1",
-    ],
 }
