@@ -1148,3 +1148,76 @@ i18n 中所有"令牌"相关名称改为"API Key"，涉及 20+ 个 key。
 | 令牌分组 | API Key 分组 |
 | 暂无令牌 | 暂无 API Key |
 | 创建令牌 | 创建 API Key |
+
+---
+
+## 13. 第十三轮：TokenHub 风格 UI 重设计（2026-06-21）
+
+### 13.1 UI 重设计概览
+
+参考腾讯云 TokenHub 控制台截图，对用户端三个核心页面进行视觉重设计，保留所有业务逻辑。
+
+**已重写文件**：
+
+| 文件 | 变更内容 |
+|------|--------|
+| `frontend/src/styles/base.css` | 新增 5 个 CSS 变量 + `.row-revoked` |
+| `frontend/src/layouts/UserLayout.vue` | 导航顺序修正（仪表盘/模型广场/用量监控/API Key/Playground/充值/设置）+ 页面背景色 |
+| `frontend/src/pages/Models.vue` | 供应商 chip 过滤栏 + 精选推荐大卡片（2列，渐变 Banner）+ 3列小卡网格 |
+| `frontend/src/pages/Usage.vue` | 时间快选栏 + 4格统计卡（含环比）+ 2列SVG折线图 + 模型消耗明细表 |
+| `frontend/src/pages/Keys.vue` | 顶部3格汇总卡 + 工具栏（搜索/状态/分组筛选）+ 状态徽章(.badge-*) + 配额进度条 |
+
+**设计文档**：`docs/superpowers/specs/2026-06-21-tokenhub-ui-design.md`  
+**实现计划**：`docs/superpowers/plans/2026-06-21-tokenhub-ui-redesign.md`
+
+### 13.2 本地环境修复
+
+#### Redis RESP3 兼容问题
+
+**现象**：本地启动 admin/gateway 服务时 Redis 连接报错，提示不支持 `HELLO` 命令。
+
+**根本原因**：本地 Redis 版本较旧（< 6.0），不支持 RESP3 协议，而 `redis-py` 默认尝试发送 `HELLO 3`。
+
+**修复**：在两处 `redis_client.py` 创建连接时增加 `protocol=2` 参数：
+
+```python
+# admin/redis_client.py 和 gateway/redis_client.py
+redis_client = redis.from_url(REDIS_URL, protocol=2)
+```
+
+#### Prometheus instrumentator 崩溃
+
+**现象**：gateway admin 路由返回 500，日志显示 `prometheus_fastapi_instrumentator` 在 `_IncludedRouter` 上崩溃。
+
+**根本原因**：`prometheus_fastapi_instrumentator` 与 FastAPI 的 `include_router` 生成的 `_IncludedRouter` 不兼容。
+
+**修复**：`gateway/main.py` 注释掉 Prometheus instrumentation：
+
+```python
+# Instrumentator().instrument(app).expose(app)  # 本地不兼容，生产环境可用
+```
+
+### 13.3 本地开发登录凭据
+
+- 邮箱：`admin@example.com`
+- 密码：`Admin123`（注意大写 A）
+- 登录接口字段名：`login`（不是 `email`）
+
+### 13.4 本地启动顺序
+
+```bash
+# 1. Redis
+D:/tools/redis/redis-server.exe --bind 127.0.0.1 --port 6379
+
+# 2. PostgreSQL
+D:/tools/pgsql/pgsql/bin/pg_ctl.exe -D D:/tools/pgsql/data start
+
+# 3. Admin 服务
+cd D:/code/llm-gateway/admin && DOTENV_PATH=../.env.dev python -m uvicorn main:app --port 8001 --reload
+
+# 4. Gateway 服务
+cd D:/code/llm-gateway/gateway && DOTENV_PATH=../.env.dev python -m uvicorn main:app --port 8000 --reload
+
+# 5. 前端
+cd D:/code/llm-gateway/frontend && npm run dev
+```
