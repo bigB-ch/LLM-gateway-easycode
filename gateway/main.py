@@ -73,7 +73,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-Instrumentator().instrument(app).expose(app)
+# Instrumentator().instrument(app).expose(app)  # disabled: causes 500 on _IncludedRouter
 
 from admin_routes import router as admin_router
 

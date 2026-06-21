@@ -29,6 +29,25 @@
   --mc-yellow-bg: #fef8e8;  --mc-yellow: #f59e0b;
   --mc-pink-bg: #fde8ec;    --mc-pink: #ec4899;
   --mc-orange-bg: #fef0e8;  --mc-orange: #f97316;
+
+  /* TokenHub redesign additions */
+  --status-active: #059669;
+  --status-expired: #b45309;
+  --status-revoked: #dc2626;
+  --quota-warn: #f59e0b;
+  --page-bg: #f5f6fa;
+
+  /* Color-block card backgrounds */
+  --card-blue-bg: rgba(79, 110, 247, 0.06);
+  --card-blue-accent: #4f6ef7;
+  --card-green-bg: rgba(52, 211, 153, 0.06);
+  --card-green-accent: #34d399;
+  --card-purple-bg: rgba(168, 85, 247, 0.06);
+  --card-purple-accent: #a855f7;
+  --card-yellow-bg: rgba(245, 158, 11, 0.06);
+  --card-yellow-accent: #f59e0b;
+  --card-red-bg: rgba(220, 38, 38, 0.06);
+  --card-red-accent: #dc2626;
 }
 
 /* Dark mode overrides */
@@ -861,3 +880,6 @@ html.dark .auth-page {
 .flex-between { display: flex; justify-content: space-between; align-items: center; }
 .gap-8 { gap: 8px; }
 .gap-16 { gap: 16px; }
+
+/* Keys page: revoked rows appear dimmed */
+.row-revoked td { opacity: 0.6; }

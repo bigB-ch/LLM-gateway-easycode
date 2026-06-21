@@ -15,6 +15,7 @@ import Usage from './pages/Usage.vue'
 import Playground from './pages/Playground.vue'
 import Settings from './pages/Settings.vue'
 import Models from './pages/Models.vue'
+import ModelDetail from './pages/ModelDetail.vue'
 
 // Admin pages
 import AdminDashboard from './pages/AdminDashboard.vue'
@@ -47,6 +48,7 @@ const routes = [
       { path: 'playground', component: Playground },
       { path: 'settings', component: Settings },
       { path: 'models', component: Models },
+      { path: 'models/:id', component: ModelDetail },
     ],
   },
 

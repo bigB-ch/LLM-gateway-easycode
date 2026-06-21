@@ -1,218 +1,254 @@
 <template>
-  <div style="display:flex;gap:16px">
-    <!-- Left filter panel -->
-    <n-card :bordered="true" size="small" style="width:220px;flex-shrink:0;align-self:flex-start;position:sticky;top:24px">
-      <n-space align="center" justify="space-between" style="margin-bottom:16px">
-        <n-text style="font-size:13px;font-weight:600">{{ t('filter') }}</n-text>
-        <n-button size="tiny" @click="resetFilters">{{ t('reset') }}</n-button>
-      </n-space>
-
-      <div style="border-bottom:1px solid var(--border-light);padding-bottom:12px;margin-bottom:12px">
-        <n-text style="font-size:12px;font-weight:600;display:block;margin-bottom:8px">供应商（{{ modelCount }}）</n-text>
-        <n-radio-group v-model:value="fProvider" vertical :size="'small'">
-          <n-radio v-for="p in providerOptions" :key="p.value" :value="p.value" style="font-size:12px">{{ p.label }}</n-radio>
-        </n-radio-group>
-      </div>
-
-      <div style="border-bottom:1px solid var(--border-light);padding-bottom:12px;margin-bottom:12px">
-        <n-text style="font-size:12px;font-weight:600;display:block;margin-bottom:8px">{{ t('billingType') }}</n-text>
-        <n-radio-group v-model:value="fBilling" vertical :size="'small'">
-          <n-radio value="" style="font-size:12px">{{ t('allTypes') }}</n-radio>
-          <n-radio value="per_token" style="font-size:12px">{{ t('perToken') }}</n-radio>
-          <n-radio value="per_use" style="font-size:12px">{{ t('perUse') }}</n-radio>
-        </n-radio-group>
-      </div>
-
-      <div style="padding-bottom:0">
-        <n-text style="font-size:12px;font-weight:600;display:block;margin-bottom:8px">{{ t('tags') }}</n-text>
-        <div style="display:flex;flex-wrap:wrap;gap:4px">
-          <span v-for="tg in tagOptions" :key="tg" :style="{cursor:'pointer',fontSize:'11px',padding:'3px 8px',borderRadius:'12px',border:'1px solid ' + (fTag === tg ? 'var(--primary)' : 'var(--border-light)'),background: fTag === tg ? 'var(--primary)' : 'transparent',color: fTag === tg ? '#fff' : 'var(--text-secondary)'}" @click="fTag = fTag === tg ? '' : tg">{{ tg || t('all') }}</span>
-        </div>
-      </div>
-    </n-card>
-
-    <!-- Right content -->
-    <div style="flex:1;min-width:0">
-      <!-- Blue banner -->
-      <div style="background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;padding:24px 28px;border-radius:var(--radius-lg);margin-bottom:16px">
-        <n-text style="font-size:17px;font-weight:700;display:block">{{ t('allSuppliers') }}（共 {{ filteredModels.length }} 个模型）</n-text>
-        <n-text style="font-size:13px;opacity:0.75;display:block;margin-top:4px">{{ t('modelCountDesc') || '查看所有可用的AI模型供应商，包括众多知名供应商的模型。' }}</n-text>
-      </div>
-
-      <!-- Toolbar -->
-      <n-space align="center" justify="space-between" style="margin-bottom:16px">
-        <n-space :size="12" align="center" style="flex:1">
-          <n-input v-model:value="searchQuery" :placeholder="t('searchModel')" size="small" style="width:260px" />
-          <n-text depth="3" style="font-size:11px">&#x2139;&#xFE0F; {{ t('clickToCopyHint') }}</n-text>
-        </n-space>
-        <n-space :size="6">
-          <n-button size="small" @click="showPrice = !showPrice">{{ showPrice ? t('hidePrice') : t('showPrice') }}</n-button>
-          <n-button size="small" @click="showDesc = !showDesc">{{ showDesc ? '隐藏' : '显示' }}描述</n-button>
-          <n-button size="small" @click="viewGrid = !viewGrid">{{ viewGrid ? t('cardView') : t('tableView') }}</n-button>
-        </n-space>
-      </n-space>
-
-      <!-- Card view -->
-      <div v-if="filteredModels.length && viewGrid" class="model-grid">
-        <div v-for="m in filteredModels" :key="m.id" class="card" style="padding:16px;position:relative">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-            <span v-if="m.icon" style="width:10px;height:10px;border-radius:50%;flex-shrink:0;background:modelColor(m.id)"></span>
-            <span style="font-weight:700;font-size:14px;cursor:pointer;color:var(--primary);user-select:all" @click="copyModelId(m.id)" :title="t('clickToCopy')">{{ modelDisplayName(m.id) }}</span>
-            <span style="font-size:10px;color:var(--text-muted);margin-left:auto;user-select:all">modelname: <span style="font-family:monospace;font-size:11px;color:var(--text-secondary)">{{ m.id }}</span></span>
-          </div>
-          <n-text depth="3" style="font-size:11px;display:block;margin-bottom:8px">{{ providerName(m.provider) }}</n-text>
-
-          <div v-if="m.per_use > 0" style="margin-bottom:8px">
-            <div style="padding:6px 12px;background:#fef3c7;border-radius:var(--radius-sm)">
-              <n-text depth="3" style="font-size:10px">{{ t('modelPrice') }}</n-text>
-              <n-text style="font-weight:600;font-size:14px;color:#d97706">&yen;{{ m.per_use_fmt }} / {{ t('perUseUnit') || '次' }}</n-text>
-            </div>
-          </div>
-
-          <div v-if="showPrice && m.per_use === 0" style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px">
-            <div style="padding:6px 12px;background:#f8f9fb;border-radius:var(--radius-sm)">
-              <n-text depth="3" style="font-size:10px">{{ t('inputPrice') }}</n-text>
-              <n-text style="font-weight:600;font-size:13px">&yen;{{ m.input_fmt }} {{ t('per1MTokens') }}</n-text>
-            </div>
-            <div style="padding:6px 12px;background:#f8f9fb;border-radius:var(--radius-sm)">
-              <n-text depth="3" style="font-size:10px">{{ t('outputPrice') }}</n-text>
-              <n-text style="font-weight:600;font-size:13px">&yen;{{ m.output_fmt }} {{ t('per1MTokens') }}</n-text>
-            </div>
-            <div v-if="m.cache_price > 0" style="padding:6px 12px;background:#f8f9fb;border-radius:var(--radius-sm)">
-              <n-text depth="3" style="font-size:10px">{{ t('cacheRead') }}</n-text>
-              <n-text style="font-weight:600;font-size:13px;color:var(--success)">&yen;{{ m.cache_fmt }} {{ t('per1MTokens') }}</n-text>
-            </div>
-          </div>
-
-          <div v-if="m.tags" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">
-            <span v-for="t in m.tags.split(',')" :key="t" class="badge" style="font-size:10px;background:rgba(99,102,241,0.1);color:var(--primary)">{{ t }}</span>
-          </div>
-
-          <n-text v-if="showDesc && m.description" depth="3" style="font-size:11px;display:block;margin-top:8px;line-height:1.4">{{ m.description }}</n-text>
-        </div>
-      </div>
-
-      <!-- Table view -->
-      <n-card v-else-if="filteredModels.length && !viewGrid" :bordered="true">
-        <n-data-table :columns="tableColumns" :data="filteredModels" :bordered="false" :single-line="false" :min-height="100" />
-      </n-card>
-
-      <!-- Empty -->
-      <n-card v-else :bordered="true">
-        <n-empty :description="t('noModelsMatch') || '暂无匹配模型'" style="padding:40px 0">
-          <template #extra>
-            <n-text depth="3" style="font-size:12px">{{ t('adjustFilterHint') || '尝试调整筛选条件' }}</n-text>
-          </template>
-        </n-empty>
-      </n-card>
+  <div>
+    <!-- Provider filter tabs + search -->
+    <div class="model-filter-bar">
+      <button
+        v-for="p in providerTabs"
+        :key="p.value"
+        :class="['model-tab', fProvider === p.value && 'active']"
+        @click="fProvider = p.value"
+      >{{ p.label }}</button>
+      <div style="flex:1" />
+      <input v-model="searchQuery" class="model-search" placeholder="搜索模型..." />
     </div>
+
+    <!-- Featured section -->
+    <template v-if="featuredModels.length">
+      <div class="section-heading">精选推荐</div>
+      <div class="featured-grid">
+        <div
+          v-for="m in featuredModels"
+          :key="m.id"
+          class="featured-card"
+          style="cursor:pointer"
+          @click="$router.push('/models/' + m.id)"
+        >
+          <div :class="['featured-banner', 'banner-' + colorKey(m.provider)]">
+            <div class="featured-icon">{{ providerInitial(m.provider) }}</div>
+            <div>
+              <div class="featured-name">{{ displayName(m.id) }}</div>
+              <div class="featured-sub">{{ m.provider }}</div>
+            </div>
+          </div>
+          <div class="featured-body">
+            <div class="tag-row">
+              <span v-for="tg in splitTags(m.tags)" :key="tg" class="mtag">{{ tg }}</span>
+            </div>
+            <p class="mdesc">{{ m.description || '高性能大语言模型' }}</p>
+            <div class="price-row">
+              <span v-if="m.per_use > 0" class="pchip pchip--amber">¥{{ m.per_use_fmt }}/次</span>
+              <template v-else>
+                <span class="pchip">输入 ¥{{ m.input_fmt }}/1M</span>
+                <span class="pchip">输出 ¥{{ m.output_fmt }}/1M</span>
+              </template>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- All models grid -->
+    <div class="section-heading" style="margin-top:24px">
+      全部模型（{{ filteredModels.length }}）
+    </div>
+    <div v-if="filteredModels.length" class="model-grid">
+      <div
+        v-for="m in filteredModels"
+        :key="m.id"
+        class="model-card"
+        @click="$router.push('/models/' + m.id)"
+      >
+        <div class="mc-header">
+          <div :class="['mc-icon', 'icon-' + colorKey(m.provider)]">
+            {{ providerInitial(m.provider) }}
+          </div>
+          <div style="min-width:0">
+            <div class="mc-name">{{ displayName(m.id) }}</div>
+            <div class="mc-provider">{{ m.provider }}</div>
+          </div>
+        </div>
+        <p class="mc-desc">{{ m.description || '高性能大语言模型' }}</p>
+        <div class="price-row" style="margin-top:auto">
+          <span v-if="m.per_use > 0" class="pchip pchip--amber">¥{{ m.per_use_fmt }}/次</span>
+          <template v-else>
+            <span class="pchip">¥{{ m.input_fmt }}/1M in</span>
+            <span class="pchip">¥{{ m.output_fmt }}/1M out</span>
+          </template>
+        </div>
+      </div>
+    </div>
+    <div v-else class="model-empty">暂无匹配模型，尝试调整筛选条件</div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, h, onMounted } from 'vue'
-import { useMessage } from 'naive-ui'
-import {
-  NCard, NButton, NDataTable, NEmpty, NInput, NRadio, NRadioGroup,
-  NSpace, NText,
-} from 'naive-ui'
+import { ref, computed, onMounted } from 'vue'
 import { gatewayApi } from '../gatewayApi'
-import { useI18n } from '../i18n'
-const { t } = useI18n()
-const message = useMessage()
+
+const FEATURED_IDS = ['claude-sonnet-4-5', 'deepseek-r1']
+
+const DISPLAY_NAMES = {
+  'deepseek-v4-flash': 'DeepSeek V4 Flash',
+  'deepseek-v4-pro': 'DeepSeek V4 Pro',
+  'deepseek-r1': 'DeepSeek R1',
+  'claude-sonnet-4-5': 'Claude Sonnet 4.5',
+  'claude-opus-4-5': 'Claude Opus 4.5',
+  'gpt-4o': 'GPT-4o',
+  'gpt-4o-mini': 'GPT-4o Mini',
+  'gemini-1.5-pro': 'Gemini 1.5 Pro',
+}
+
+const PROVIDER_LABELS = {
+  anthropic: 'Anthropic', openai: 'OpenAI', deepseek: 'DeepSeek',
+  google: 'Google', mistral: 'Mistral',
+}
+
+const COLOR_KEYS = {
+  anthropic: 'purple', openai: 'mint', deepseek: 'blue',
+  google: 'yellow', mistral: 'orange',
+}
 
 const models = ref([])
 const searchQuery = ref('')
-const showPrice = ref(true)
-const showDesc = ref(false)
-const viewGrid = ref(true)
 const fProvider = ref('')
-const fBilling = ref('')
-const fTag = ref('')
 
-const providerOptions = ref([{ value: '', label: '全部供应商' }])
-const tagOptions = ref([''])
-
-const MODEL_DISPLAY = {
-  'deepseek-v4-flash': 'DeepSeek V4 Flash',
-  'deepseek-v4-pro': 'DeepSeek V4 Pro',
-}
-const PROVIDER_NAMES = { deepseek: 'DeepSeek' }
-const MODEL_COLORS = { 'deepseek-v4-flash': '#4f46e5', 'deepseek-v4-pro': '#7c3aed' }
-
-const tableColumns = [
-  { title: t('model'), key: 'id', render: (row) => h('div', [
-    h('div', { style: 'font-weight:600;cursor:pointer;color:var(--primary)' }, modelDisplayName(row.id)),
-    h('div', { style: 'font-size:10px;color:var(--text-muted)' }, 'modelname: ' + row.id),
-  ]) },
-  { title: t('supplier'), key: 'provider', render: (row) => providerName(row.provider) },
-  { title: t('inputPrice'), key: 'input_fmt', render: (row) => row.per_use === 0 ? '¥' + row.input_fmt + '/1M' : h('span', { style: 'color:#d97706' }, '¥' + row.per_use_fmt + '/次') },
-  { title: t('outputPrice'), key: 'output_fmt', render: (row) => '¥' + row.output_fmt + '/1M' },
-  { title: t('cacheRead'), key: 'cache_fmt', render: (row) => row.per_use > 0 ? '¥' + row.per_use_fmt + '/次' : '¥' + row.cache_fmt + '/1M' },
-  { title: t('tags'), key: 'tags', render: (row) => (row.tags || '').split(',').slice(0, 3).map(t => h('span', { class: 'badge', style: 'font-size:10px;margin-right:2px' }, t)) },
-]
+const providerTabs = computed(() => {
+  const providers = [...new Set(models.value.map(m => m.provider))]
+  return [
+    { value: '', label: '全部' },
+    ...providers.map(p => ({ value: p, label: PROVIDER_LABELS[p] || p })),
+  ]
+})
 
 const filteredModels = computed(() => {
   let list = models.value
+  if (fProvider.value) list = list.filter(m => m.provider === fProvider.value)
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase()
-    list = list.filter(m => m.id.toLowerCase().includes(q) || PROVIDER_NAMES[m.provider]?.toLowerCase().includes(q))
+    list = list.filter(m =>
+      m.id.toLowerCase().includes(q) || (m.description || '').toLowerCase().includes(q)
+    )
   }
-  if (fProvider.value) list = list.filter(m => m.provider === fProvider.value)
-  if (fBilling.value === 'per_token') list = list.filter(m => !m.per_use)
-  if (fBilling.value === 'per_use') list = list.filter(m => m.per_use)
-  if (fTag.value) list = list.filter(m => (m.tags || '').includes(fTag.value))
   return list
 })
 
-const modelCount = computed(() => {
-  const providers = new Set(models.value.map(m => m.provider))
-  return providers.size
-})
+const featuredModels = computed(() =>
+  FEATURED_IDS.map(id => models.value.find(m => m.id === id)).filter(Boolean)
+)
 
-function copyModelId(id) {
-  navigator.clipboard.writeText(id).catch(() => {
-    const el = document.createElement('textarea')
-    el.value = id; el.style.position = 'fixed'; el.style.left = '-9999px'
-    document.body.appendChild(el); el.select(); document.execCommand('copy')
-    document.body.removeChild(el)
-  })
-  message.success(t('copyModelSuccess'))
+function displayName(id) {
+  return DISPLAY_NAMES[id] || id.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ')
 }
-
-function modelDisplayName(id) {
-  return MODEL_DISPLAY[id] || id.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ')
-}
-function providerName(key) { return PROVIDER_NAMES[key] || key }
-function modelColor(id) { return MODEL_COLORS[id] || '#4f46e5' }
-function resetFilters() { fProvider.value = ''; fBilling.value = ''; fTag.value = '' }
+function colorKey(provider) { return COLOR_KEYS[provider] || 'pink' }
+function providerInitial(provider) { return (PROVIDER_LABELS[provider] || provider).charAt(0).toUpperCase() }
+function splitTags(tags) { return (tags || '').split(',').map(t => t.trim()).filter(Boolean) }
 
 onMounted(async () => {
   try {
     const data = await gatewayApi.listModelCatalog()
-    const allModels = (data.data || [])
-
-    const providers = [...new Set(allModels.map(m => m.provider))]
-    providerOptions.value = [
-      { value: '', label: '全部供应商' },
-      ...providers.map(p => ({ value: p, label: `${PROVIDER_NAMES[p] || p} (${allModels.filter(m => m.provider === p).length})` })),
-    ]
-
-    const allTags = new Set()
-    allModels.forEach(m => (m.tags || '').split(',').forEach(t => { if (t.trim()) allTags.add(t.trim()) }))
-    tagOptions.value = ['', ...allTags]
-
-    models.value = allModels.map(m => ({
+    models.value = (data.data || []).map(m => ({
       ...m,
-      id: m.model, input_fmt: m.input_price.toFixed(2), output_fmt: m.output_price.toFixed(2),
-      cache_fmt: m.cache_price.toFixed(2), per_use_fmt: (m.per_use || 0).toFixed(2),
-      tags: m.tags || '', description: m.description || '', icon: !!MODEL_COLORS[m.model],
+      id: m.model,
+      input_fmt: (m.input_price || 0).toFixed(2),
+      output_fmt: (m.output_price || 0).toFixed(2),
+      per_use_fmt: (m.per_use || 0).toFixed(2),
       per_use: m.per_use || 0,
     }))
-  } catch (e) { /* */ }
+  } catch (e) { /* silent */ }
 })
 </script>
 
 <style scoped>
-.model-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; }
+.model-filter-bar {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 20px; flex-wrap: wrap;
+}
+.model-tab {
+  padding: 6px 16px; border-radius: 20px;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text-secondary); font-size: 13px; cursor: pointer;
+  transition: all 0.15s;
+}
+.model-tab:hover { border-color: var(--primary); color: var(--primary); }
+.model-tab.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.model-search {
+  padding: 6px 14px; border-radius: 20px;
+  border: 1px solid var(--border); font-size: 13px;
+  width: 200px; outline: none; background: var(--surface); color: var(--text);
+}
+.model-search:focus { border-color: var(--primary); }
+.section-heading { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 12px; }
+.featured-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.featured-card {
+  border-radius: var(--radius-lg); border: 1px solid var(--border-light);
+  overflow: hidden; cursor: pointer; background: var(--surface);
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+.featured-card:hover { box-shadow: 0 4px 20px rgba(79,110,247,0.15); border-color: var(--primary); }
+.featured-banner {
+  display: flex; align-items: center; gap: 16px;
+  padding: 20px 24px; color: #fff;
+}
+.banner-purple { background: linear-gradient(135deg,#7c3aed,#4f46e5); }
+.banner-mint   { background: linear-gradient(135deg,#059669,#0891b2); }
+.banner-blue   { background: linear-gradient(135deg,#2563eb,#4f46e5); }
+.banner-yellow { background: linear-gradient(135deg,#d97706,#dc2626); }
+.banner-orange { background: linear-gradient(135deg,#ea580c,#d97706); }
+.banner-pink   { background: linear-gradient(135deg,#db2777,#7c3aed); }
+.featured-icon {
+  width: 48px; height: 48px; border-radius: 12px;
+  background: rgba(255,255,255,0.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 700; flex-shrink: 0;
+}
+.featured-name { font-size: 16px; font-weight: 700; }
+.featured-sub  { font-size: 12px; opacity: 0.8; margin-top: 2px; }
+.featured-body { padding: 16px 20px; }
+.tag-row { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.mtag {
+  font-size: 11px; padding: 2px 8px; border-radius: 10px;
+  background: var(--primary-light); color: var(--primary);
+}
+.mdesc { font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin: 0 0 12px; }
+.price-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.pchip {
+  font-size: 11px; padding: 3px 8px; border-radius: 10px;
+  background: #f1f5f9; color: var(--text-secondary); border: 1px solid var(--border-light);
+}
+.pchip--amber { background: #fef3c7; color: #b45309; border-color: #fde68a; }
+.model-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+}
+@media (max-width: 900px) { .model-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .featured-grid { grid-template-columns: 1fr; } }
+.model-card {
+  background: var(--surface); border: 1px solid var(--border-light);
+  border-radius: var(--radius); padding: 16px; cursor: pointer;
+  transition: box-shadow 0.15s, border-color 0.15s;
+  display: flex; flex-direction: column; gap: 8px; min-height: 130px;
+}
+.model-card:hover { box-shadow: 0 4px 16px rgba(79,110,247,0.12); border-color: var(--primary); }
+.mc-header { display: flex; align-items: center; gap: 10px; }
+.mc-icon {
+  width: 36px; height: 36px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+.icon-purple { background: linear-gradient(135deg,#7c3aed,#4f46e5); }
+.icon-mint   { background: linear-gradient(135deg,#059669,#0891b2); }
+.icon-blue   { background: linear-gradient(135deg,#2563eb,#4f46e5); }
+.icon-yellow { background: linear-gradient(135deg,#d97706,#dc2626); }
+.icon-orange { background: linear-gradient(135deg,#ea580c,#d97706); }
+.icon-pink   { background: linear-gradient(135deg,#db2777,#7c3aed); }
+.mc-name {
+  font-size: 13px; font-weight: 600; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.mc-provider { font-size: 11px; color: var(--text-muted); }
+.mc-desc {
+  font-size: 12px; color: var(--text-secondary); line-height: 1.4; margin: 0;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  flex: 1;
+}
+.model-empty { text-align: center; padding: 60px 0; color: var(--text-muted); font-size: 14px; }
 </style>

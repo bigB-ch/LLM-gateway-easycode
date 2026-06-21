@@ -1056,6 +1056,7 @@ docker compose down -v
 | 2026-06-20 (第十三轮) | 安装 Playwright MCP (@playwright/mcp)，用于 UI 设计参考和截图验证 |
 | 2026-06-19 (第十一轮) | 定价管理修复、Playground 重设计、登录页动效、SMTP 配置 |
 | 2026-06-20 (第十二轮) | API Key 管理页改造：新增 API 调用弹窗（代码生成 + AI 工具接入）、导航栏和侧边栏调整、术语统一为 API Key |
+| 2026-06-21 (第十三~十四轮) | TokenHub UI 重设计（6 页重写 + 模型详情页 + Color-Block 色彩方案 + 环境调试） |
 
 ---
 
@@ -1221,3 +1222,68 @@ cd D:/code/llm-gateway/gateway && DOTENV_PATH=../.env.dev python -m uvicorn main
 # 5. 前端
 cd D:/code/llm-gateway/frontend && npm run dev
 ```
+
+---
+
+## 14. 第十四轮：TokenHub UI 完善 — 模型详情页 + 页面重构 + Color-Block（2026-06-21 下午）
+
+### 14.1 模型详情页（ModelDetail.vue）
+
+**新增页面**：`/models/:id` 路由
+
+展示内容：
+- 模型名称 + 供应商图标 + 标签
+- 价格信息卡（input/output/cache/per-use）
+- 模型信息卡（Model ID 可复制、供应商、计费方式）
+- 调用示例（cURL / Python / Node.js 三个 tab，自动填入模型 ID）
+
+**涉及文件**：`ModelDetail.vue`（新建）、`router.js`（加子路由）、`Models.vue`（恢复 click 跳转）
+
+### 14.2 Dashboard 重构
+
+**移除**：API 信息、快捷入口、底部公告/FAQ
+**新增**：
+- 消费趋势折线图 + Token 消耗折线图（2列）
+- 模型使用量柱状图（全宽）
+- 按用户反馈反复调整图表数量（3列 → 2+1行）
+
+### 14.3 Usage 页面重构
+
+**移除**：SVG 折线图（移到 Dashboard）
+**调整**：统计卡从 Dashboard 移回 Usage（用户要求）
+**新增**：模型调用分布横向条形图 + 状态徽章（成功/失败）
+
+### 14.4 API 信息迁移到 Keys 页面
+
+Keys 页底部新增「接入信息」卡片：Base URL / Auth 方式 / 接口格式 / 文档链接
+
+### 14.5 Color-Block 多彩分区块设计（6页统一）
+
+| 阶段 | 方案 | 反馈 |
+|------|------|------|
+| 初稿 | 纯色 pastel 背景（#eef2ff 等） | ❌ 太花哨 |
+| 终稿 | rgba 6% 极浅底色 + 3px 彩色左边框 | ✅ 克制有层次 |
+
+配色映射（客户端 + 管理端统一）：
+- 蓝 rgba(79,110,247,0.06)：余额、请求数、用户数
+- 绿 rgba(52,211,153,0.06)：有效 Key、今日调用
+- 紫 rgba(168,85,247,0.06)：Token 统计、供应商
+- 黄 rgba(245,158,11,0.06)：消费金额、营收
+- 红 rgba(220,38,38,0.06)：错误率
+
+**覆盖**：Dashboard, Usage, Keys, AdminDashboard
+
+### 14.6 本次新增/修改文件清单
+
+| 文件 | 操作 |
+|------|------|
+| `frontend/src/pages/ModelDetail.vue` | 新增 |
+| `frontend/src/router.js` | 修改 |
+| `frontend/src/pages/Models.vue` | 修改（恢复 click） |
+| `frontend/src/pages/Dashboard.vue` | 重写（加图表、去底部信息） |
+| `frontend/src/pages/Usage.vue` | 重写（移除图表、加条形图） |
+| `frontend/src/pages/Keys.vue` | 修改（接入信息卡） |
+| `frontend/src/layouts/UserLayout.vue` | 修改（移除图标） |
+| `frontend/src/styles/base.css` | 修改（加 10 个 CSS 变量） |
+| `frontend/src/pages/AdminDashboard.vue` | 修改（加颜色） |
+| `docs/debugging-history.md` | 本轮记录 |

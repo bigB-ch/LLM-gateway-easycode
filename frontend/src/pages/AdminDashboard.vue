@@ -5,22 +5,22 @@
     <!-- Stat cards -->
     <n-grid :x-gap="16" :y-gap="16" :cols="4" style="margin-bottom:16px">
       <n-grid-item>
-        <n-card size="small" :bordered="true">
+        <n-card size="small" :bordered="true" style="background:var(--card-blue-bg);border-left:3px solid var(--card-blue-accent)">
           <n-statistic :label="t('totalUsers')" :value="stats.total_users" />
         </n-card>
       </n-grid-item>
       <n-grid-item>
-        <n-card size="small" :bordered="true">
+        <n-card size="small" :bordered="true" style="background:var(--card-green-bg);border-left:3px solid var(--card-green-accent)">
           <n-statistic :label="t('todayCalls')" :value="(stats.today_calls || 0).toLocaleString()" />
         </n-card>
       </n-grid-item>
       <n-grid-item>
-        <n-card size="small" :bordered="true">
+        <n-card size="small" :bordered="true" style="background:var(--card-yellow-bg);border-left:3px solid var(--card-yellow-accent)">
           <n-statistic :label="t('todayRevenue')" :value="'¥' + (stats.today_revenue_yuan || '0')" />
         </n-card>
       </n-grid-item>
       <n-grid-item>
-        <n-card size="small" :bordered="true">
+        <n-card size="small" :bordered="true" style="background:var(--card-purple-bg);border-left:3px solid var(--card-purple-accent)">
           <n-statistic :label="t('activeSuppliers')" :value="stats.active_suppliers" />
         </n-card>
       </n-grid-item>
