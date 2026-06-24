@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,6 +11,11 @@ from models.api_key import ApiKey
 from dependencies import get_current_user, require_admin
 
 router = APIRouter(prefix="/admin/api/reports", tags=["reports"])
+
+
+def parse_date_end(d: str) -> datetime:
+    """Convert date string 'YYYY-MM-DD' to exclusive end-of-day boundary (< next day)."""
+    return datetime.fromisoformat(d) + timedelta(days=1)
 
 
 @router.get("/dashboard")
@@ -236,7 +241,7 @@ async def admin_user_daily(
     if date_from:
         conditions.append(UsageLog.created_at >= datetime.fromisoformat(date_from))
     if date_to:
-        conditions.append(UsageLog.created_at <= datetime.fromisoformat(date_to))
+        conditions.append(UsageLog.created_at < parse_date_end(date_to))
 
     base = select(
         cast(UsageLog.created_at, Date).label("date"),
@@ -345,7 +350,7 @@ async def usage_details(
     if date_from:
         conditions.append(UsageLog.created_at >= datetime.fromisoformat(date_from))
     if date_to:
-        conditions.append(UsageLog.created_at <= datetime.fromisoformat(date_to))
+        conditions.append(UsageLog.created_at < parse_date_end(date_to))
 
     base_query = select(UsageLog).where(*conditions)
     count_q = select(func.count()).select_from(base_query.subquery())

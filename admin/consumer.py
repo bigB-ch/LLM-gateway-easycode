@@ -64,6 +64,11 @@ async def batch_insert(messages: list[tuple[str, dict]]) -> list[str]:
         result = await conn.execute(text(sql), params)
         inserted = result.rowcount
 
+        # If no rows were inserted (all duplicates from ON CONFLICT DO NOTHING),
+        # skip balance deduction to avoid double-charging users
+        if inserted == 0:
+            return msg_ids
+
         for i, (msg_id, data) in enumerate(messages):
             if data.get("status") != "success":
                 continue
@@ -131,6 +136,7 @@ async def run_consumer():
     await ensure_group()
     r = redis_client.redis
     consumer_name = f"admin-{os.getpid()}"
+    logger.info(f"Consumer started: {consumer_name}")
 
     while True:
         try:
@@ -141,34 +147,49 @@ async def run_consumer():
             if messages:
                 for stream_name, entries in messages:
                     parsed = [(eid, data) for eid, data in entries]
-                    acked = await batch_insert(parsed)
-                    for eid in acked:
-                        await r.xack(STREAM_KEY, GROUP_NAME, eid)
-
-                    for eid, data in parsed:
-                        if eid not in acked:
+                    try:
+                        acked = await batch_insert(parsed)
+                        for eid in acked:
+                            await r.xack(STREAM_KEY, GROUP_NAME, eid)
+                        skipped = len(parsed) - len(acked)
+                        if skipped:
+                            logger.info(f"Processed {len(acked)} msgs, {skipped} duplicates skipped")
+                    except Exception as e:
+                        logger.error(f"Batch insert failed ({len(parsed)} msgs): {e}")
+                        for eid, data in parsed:
                             retries = await r.hget(f"dlq_retry:{eid}", "count")
                             retries = int(retries or 0) + 1
                             if retries > MAX_RETRIES:
                                 await r.xadd(DLQ_KEY, {**data, "retries": str(retries)})
                                 await r.xack(STREAM_KEY, GROUP_NAME, eid)
                                 await r.delete(f"dlq_retry:{eid}")
+                                logger.warning(f"DLQ: moved {eid} after {retries} failed attempts")
                             else:
                                 await r.hset(f"dlq_retry:{eid}", "count", str(retries))
 
             pending_info = await r.xpending(STREAM_KEY, GROUP_NAME)
-            if pending_info and pending_info.get("pending", 0) > 10:
+            pending_count = 0
+            if isinstance(pending_info, dict):
+                pending_count = pending_info.get("pending", 0)
+            elif hasattr(pending_info, "pending"):
+                pending_count = pending_info.pending
+
+            if pending_count > 10:
+                logger.info(f"Recovering {pending_count} pending messages")
                 pending_msgs = await r.xpending_range(
                     STREAM_KEY, GROUP_NAME, min="-", max="+", count=50,
                 )
                 for entry in pending_msgs:
-                    msg = await r.xrange(STREAM_KEY, entry["message_id"], entry["message_id"])
+                    msg_id = entry.get("message_id") if isinstance(entry, dict) else entry.message_id
+                    msg = await r.xrange(STREAM_KEY, msg_id, msg_id)
                     if msg:
                         eid, data = msg[0]
-                        parsed = data
-                        acked = await batch_insert([(eid, parsed)])
-                        for eid2 in acked:
-                            await r.xack(STREAM_KEY, GROUP_NAME, eid2)
+                        try:
+                            acked = await batch_insert([(eid, data)])
+                            for eid2 in acked:
+                                await r.xack(STREAM_KEY, GROUP_NAME, eid2)
+                        except Exception as e:
+                            logger.error(f"Pending recovery failed for {eid}: {e}")
 
         except Exception as e:
             logger.error(f"Consumer error: {e}")
