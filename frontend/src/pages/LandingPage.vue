@@ -1,113 +1,52 @@
 <template>
   <div class="landing">
-    <!-- Hero -->
     <div class="hero">
       <h1 class="hero-title">API 聚合平台</h1>
       <p class="hero-subtitle">个人学习使用</p>
-      <div class="hero-metrics" v-if="metrics">
-        <div class="hm-item">
-          <span class="hm-num">{{ metrics.modelCount }}+</span>
-          <span class="hm-label">可用模型</span>
-        </div>
-        <div class="hm-dot"></div>
-        <div class="hm-item">
-          <span class="hm-num">{{ metrics.lowestPrice }}</span>
-          <span class="hm-label">每百万 Token 起</span>
-        </div>
-        <div class="hm-dot"></div>
-        <div class="hm-item">
-          <span class="hm-num">{{ metrics.providerCount }}</span>
-          <span class="hm-label">供应商</span>
-        </div>
-      </div>
     </div>
 
-    <!-- User Stats -->
-    <div class="user-stats" v-if="stats.balance !== null">
-      <div class="us-item" style="background:var(--card-blue-bg);border-left-color:var(--card-blue-accent)">
-        <span class="us-label">账户余额</span>
-        <span class="us-value" style="color:var(--card-blue-accent)">¥{{ stats.balance }}</span>
-      </div>
-      <div class="us-item" style="background:var(--card-green-bg);border-left-color:var(--card-green-accent)">
-        <span class="us-label">今日调用</span>
-        <span class="us-value" style="color:var(--card-green-accent)">{{ stats.todayCalls }}</span>
-      </div>
-      <div class="us-item" style="background:var(--card-purple-bg);border-left-color:var(--card-purple-accent)">
-        <span class="us-label">消耗 Tokens</span>
-        <span class="us-value" style="color:var(--card-purple-accent)">{{ fmtTokens(stats.totalTokens) }}</span>
-      </div>
-      <div class="us-item" style="background:var(--card-yellow-bg);border-left-color:var(--card-yellow-accent)">
-        <span class="us-label">有效密钥</span>
-        <span class="us-value" style="color:var(--card-yellow-accent)">{{ stats.keyCount }}</span>
-      </div>
-    </div>
-
-    <!-- Quick Actions -->
-    <div class="section-label">快捷入口</div>
-    <div class="quick-cards">
-      <router-link to="/playground" class="qc-item" style="--card-bg:var(--card-blue-bg);--card-accent:var(--card-blue-accent)">
-        <div class="qc-icon" style="background:var(--card-blue-accent)">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+    <div class="entry-cards">
+      <router-link to="/playground" class="ec-item" style="--c:#4f6ef7">
+        <div class="ec-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
         </div>
-        <div class="qc-label">在线调试</div>
-        <div class="qc-desc">Playground</div>
+        <div class="ec-info">
+          <div class="ec-name">在线调试</div>
+          <div class="ec-desc">Playground</div>
+        </div>
       </router-link>
-      <router-link to="/models" class="qc-item" style="--card-bg:var(--card-purple-bg);--card-accent:var(--card-purple-accent)">
-        <div class="qc-icon" style="background:var(--card-purple-accent)">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+      <router-link to="/models" class="ec-item" style="--c:#a855f7">
+        <div class="ec-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
         </div>
-        <div class="qc-label">模型广场</div>
-        <div class="qc-desc">浏览全部模型</div>
+        <div class="ec-info">
+          <div class="ec-name">模型广场</div>
+          <div class="ec-desc">浏览全部模型</div>
+        </div>
       </router-link>
-      <router-link to="/keys" class="qc-item" style="--card-bg:var(--card-green-bg);--card-accent:var(--card-green-accent)">
-        <div class="qc-icon" style="background:var(--card-green-accent)">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+      <router-link to="/keys" class="ec-item" style="--c:#34d399">
+        <div class="ec-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
         </div>
-        <div class="qc-label">API 密钥</div>
-        <div class="qc-desc">管理凭证</div>
+        <div class="ec-info">
+          <div class="ec-name">API 密钥</div>
+          <div class="ec-desc">管理访问凭证</div>
+        </div>
       </router-link>
-      <router-link to="/usage" class="qc-item" style="--card-bg:var(--card-yellow-bg);--card-accent:var(--card-yellow-accent)">
-        <div class="qc-icon" style="background:var(--card-yellow-accent)">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <router-link to="/usage" class="ec-item" style="--c:#f59e0b">
+        <div class="ec-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
         </div>
-        <div class="qc-label">使用日志</div>
-        <div class="qc-desc">查看调用记录</div>
+        <div class="ec-info">
+          <div class="ec-name">使用日志</div>
+          <div class="ec-desc">查看调用记录</div>
+        </div>
       </router-link>
     </div>
-
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { api } from '../api'
-
-const stats = ref({ balance: null, todayCalls: 0, totalTokens: 0, keyCount: 0 })
-const metrics = ref(null)
-
-function fmtTokens(n) {
-  if (!n) return '0'
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
-  if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K'
-  return String(n)
-}
-
-onMounted(async () => {
-  try {
-    const d = await api.getDashboard()
-    stats.value = {
-      balance: d.balance_yuan || '0.00',
-      todayCalls: d.today_calls || 0,
-      totalTokens: d.total_tokens || 0,
-      keyCount: d.key_count || 0,
-    }
-    metrics.value = {
-      modelCount: 0,
-      providerCount: 0,
-      lowestPrice: '—',
-    }
-  } catch (e) { /* */ }
-})
 </script>
 
 <style scoped>
@@ -115,15 +54,14 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 32px 24px 64px;
-  min-height: calc(100vh - var(--topbar-h) - 48px);
+  justify-content: center;
+  min-height: calc(100vh - var(--topbar-h));
+  padding: 0 24px;
 }
 
-/* ── Hero ── */
 .hero {
   text-align: center;
-  margin-bottom: 36px;
-  max-width: 700px;
+  margin-bottom: 56px;
 }
 
 .hero-title {
@@ -145,133 +83,80 @@ onMounted(async () => {
   letter-spacing: 0.04em;
 }
 
-.hero-metrics {
+/* ── Entry Cards ── */
+.entry-cards {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 24px;
-  margin-top: 28px;
-}
-
-.hm-item {
-  text-align: center;
-}
-
-.hm-num {
-  display: block;
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: var(--text);
-  line-height: 1.2;
-}
-
-.hm-label {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-}
-
-.hm-dot {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--border);
-  flex-shrink: 0;
-}
-
-/* ── User Stats ── */
-.user-stats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  gap: 16px;
   width: 100%;
-  max-width: 800px;
-  margin-bottom: 36px;
+  max-width: 600px;
 }
 
-.us-item {
-  padding: 16px;
-  border-radius: 10px;
-  border-left: 3px solid;
-  text-align: center;
-}
-
-.us-label {
-  display: block;
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  margin-bottom: 6px;
-}
-
-.us-value {
-  font-size: 1.3rem;
-  font-weight: 700;
-}
-
-/* ── Section Label ── */
-.section-label {
-  width: 100%;
-  max-width: 800px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  margin-bottom: 12px;
-  padding-left: 4px;
-}
-
-/* ── Quick Cards ── */
-.quick-cards {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  width: 100%;
-  max-width: 800px;
-  margin-bottom: 36px;
-}
-
-.qc-item {
+.ec-item {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 24px 12px;
-  border-radius: 12px;
-  background: var(--card-bg);
-  border-left: 3px solid var(--card-accent);
+  gap: 10px;
+  padding: 32px 16px 24px;
+  border-radius: 16px;
+  background: var(--bg);
+  border: 1px solid var(--border);
   text-decoration: none;
   color: var(--text);
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.25s ease;
   cursor: pointer;
+  position: relative;
+  overflow: hidden;
 }
 
-.qc-item:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+.ec-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--c);
+  opacity: 0.5;
 }
 
-.qc-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
+.ec-item:hover {
+  transform: translateY(-6px);
+  border-color: var(--c);
+  box-shadow: 0 12px 32px -8px rgba(0,0,0,0.12);
+}
+
+.ec-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  background: color-mix(in srgb, var(--c) 10%, transparent);
+  color: var(--c);
 }
 
-.qc-label {
-  font-size: 0.9rem;
+.ec-info {
+  text-align: center;
+}
+
+.ec-name {
+  font-size: 0.95rem;
   font-weight: 600;
+  margin-bottom: 2px;
 }
 
-.qc-desc {
+.ec-desc {
   font-size: 0.75rem;
   color: var(--text-muted);
 }
 
 /* ── Mobile ── */
-@media (max-width: 700px) {
-  .user-stats { grid-template-columns: repeat(2, 1fr); }
-  .quick-cards { grid-template-columns: repeat(2, 1fr); }
-  .hero-metrics { gap: 16px; }
+@media (max-width: 500px) {
+  .entry-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
 }
 </style>
