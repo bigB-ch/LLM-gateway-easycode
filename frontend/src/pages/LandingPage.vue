@@ -3,7 +3,7 @@
     <!-- Hero -->
     <div class="hero">
       <h1 class="hero-title">API 聚合平台</h1>
-      <p class="hero-subtitle">个人学习使用 · 请勿商用</p>
+      <p class="hero-subtitle">个人学习使用</p>
       <div class="hero-metrics" v-if="metrics">
         <div class="hm-item">
           <span class="hm-num">{{ metrics.modelCount }}+</span>
@@ -75,24 +75,6 @@
       </router-link>
     </div>
 
-    <!-- Provider Models -->
-    <div class="section-label">接入模型</div>
-    <div class="provider-grid" v-if="models.length">
-      <div v-for="p in models" :key="p.provider" class="pg-card">
-        <div class="pg-header">
-          <span class="pg-name">{{ p.provider }}</span>
-          <span class="pg-count">{{ p.models.length }} 个模型</span>
-        </div>
-        <div class="pg-models">
-          <div v-for="m in p.models.slice(0, 3)" :key="m.id" class="pg-model">
-            <code class="pg-code">{{ m.id }}</code>
-            <span class="pg-price" v-if="m.price">¥{{ m.price }}/1M</span>
-          </div>
-          <div v-if="p.models.length > 3" class="pg-more">+ {{ p.models.length - 3 }} 更多</div>
-        </div>
-      </div>
-    </div>
-    <div v-else class="loading-models">加载模型中...</div>
   </div>
 </template>
 
@@ -102,7 +84,6 @@ import { api } from '../api'
 
 const stats = ref({ balance: null, todayCalls: 0, totalTokens: 0, keyCount: 0 })
 const metrics = ref(null)
-const models = ref([])
 
 function fmtTokens(n) {
   if (!n) return '0'
@@ -113,30 +94,17 @@ function fmtTokens(n) {
 
 onMounted(async () => {
   try {
-    const [d, m] = await Promise.all([
-      api.getDashboard(),
-      api.getModels().catch(() => ({ data: [] }))
-        .then(r => r.data || []),
-    ])
+    const d = await api.getDashboard()
     stats.value = {
       balance: d.balance_yuan || '0.00',
       todayCalls: d.today_calls || 0,
       totalTokens: d.total_tokens || 0,
       keyCount: d.key_count || 0,
     }
-    // Group models by provider
-    const modelList = m.data || m || []
-    const grouped = {}
-    for (const model of modelList) {
-      const prov = model.provider || 'other'
-      if (!grouped[prov]) grouped[prov] = { provider: prov, models: [] }
-      grouped[prov].models.push(model)
-    }
-    models.value = Object.values(grouped)
     metrics.value = {
-      modelCount: modelList.length,
-      providerCount: Object.keys(grouped).length,
-      lowestPrice: modelList.length > 0 ? '¥0.23' : '—',
+      modelCount: 0,
+      providerCount: 0,
+      lowestPrice: '—',
     }
   } catch (e) { /* */ }
 })
@@ -300,87 +268,10 @@ onMounted(async () => {
   color: var(--text-muted);
 }
 
-/* ── Provider Grid ── */
-.provider-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 12px;
-  width: 100%;
-  max-width: 800px;
-  margin-bottom: 36px;
-}
-
-.pg-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px;
-}
-
-.pg-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-
-.pg-name {
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-.pg-count {
-  font-size: 0.72rem;
-  color: var(--text-muted);
-}
-
-.pg-models {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.pg-model {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.pg-code {
-  font-size: 0.75rem;
-  background: var(--bg);
-  padding: 2px 6px;
-  border-radius: 4px;
-  color: var(--text);
-  max-width: 160px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.pg-price {
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.pg-more {
-  font-size: 0.75rem;
-  color: var(--primary);
-  cursor: pointer;
-}
-
-.loading-models {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  padding: 24px;
-}
-
 /* ── Mobile ── */
 @media (max-width: 700px) {
   .user-stats { grid-template-columns: repeat(2, 1fr); }
   .quick-cards { grid-template-columns: repeat(2, 1fr); }
-  .provider-grid { grid-template-columns: 1fr; }
   .hero-metrics { gap: 16px; }
 }
 </style>
