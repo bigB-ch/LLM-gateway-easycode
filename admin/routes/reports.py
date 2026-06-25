@@ -201,7 +201,7 @@ async def admin_daily(
         func.count(UsageLog.id).filter(UsageLog.status == "success").label("success_calls"),
         func.coalesce(func.sum(UsageLog.prompt_tokens), 0).label("prompt_tokens"),
         func.coalesce(func.sum(UsageLog.completion_tokens), 0).label("completion_tokens"),
-        func.coalesce(func.sum(UsageLog.bill_cost), 0).label("cost"),
+        func.coalesce(func.sum(UsageLog.bill_cost).filter(UsageLog.status == "success"), 0).label("cost"),
     )
     count_q = select(func.count()).select_from(
         base.group_by(text("day")).subquery()

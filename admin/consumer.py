@@ -129,6 +129,17 @@ async def batch_insert(messages: list[tuple[str, dict]]) -> list[str]:
                         except Exception:
                             pass
 
+                # After deductions: if couldn't deduct full bill_cost,
+                # update usage_log to reflect actual amount deducted
+                if remaining > 0:
+                    actual_deducted = max(bill_cost - remaining, 0)
+                    rid = data.get("request_id", "")
+                    if rid:
+                        await conn.execute(
+                            text("UPDATE usage_logs SET bill_cost = :actual WHERE request_id = :rid"),
+                            {"actual": actual_deducted, "rid": rid},
+                        )
+
     return msg_ids
 
 

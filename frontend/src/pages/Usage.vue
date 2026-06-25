@@ -156,19 +156,35 @@ function dateRange() {
 async function loadAll() {
   const { from, to } = dateRange()
   try {
-    // api.getTrend only accepts day count — custom range falls back to 30
-    const days = activeRange.value === 'custom' ? 30 : parseInt(activeRange.value)
-    const tr = await api.getTrend(days)
-    const items = tr.details || []
-    const totalCost = items.reduce((s,d) => s + (parseFloat(d.cost_yuan)||0), 0)
-    const totalCalls = items.reduce((s,d) => s + (d.calls||0), 0)
-    const totalTokens = items.reduce((s,d) => s + (d.tokens||0), 0)
-    const totalErrors = items.reduce((s,d) => s + (d.errors||0), 0)
-    stats.value = {
-      cost: totalCost.toFixed(2),
-      calls: totalCalls,
-      tokens: totalTokens,
-      errorRate: totalCalls > 0 ? ((totalErrors/totalCalls)*100).toFixed(1) : '0.0',
+    if (activeRange.value === 'custom' && from && to) {
+      // Custom range: use /usage with date params for accurate stats
+      const usage = await api.getUsage(1, from, to)
+      const items = usage.items || []
+      const totalCost = parseFloat(usage.total_cost_yuan) || 0
+      const calls = usage.total || 0
+      const tokens = items.reduce((s, d) => s + (d.prompt_tokens || 0) + (d.completion_tokens || 0), 0)
+      const errors = items.filter(d => d.status !== 'success').length
+      stats.value = {
+        cost: totalCost.toFixed(2),
+        calls: calls,
+        tokens: tokens,
+        errorRate: calls > 0 ? ((errors / calls) * 100).toFixed(1) : '0.0',
+      }
+    } else {
+      // Preset range: use /trend
+      const days = parseInt(activeRange.value)
+      const tr = await api.getTrend(days)
+      const items = tr.details || []
+      const totalCost = items.reduce((s,d) => s + (parseFloat(d.cost_yuan)||0), 0)
+      const totalCalls = items.reduce((s,d) => s + (d.calls||0), 0)
+      const totalTokens = items.reduce((s,d) => s + (d.tokens||0), 0)
+      stats.value = {
+        cost: totalCost.toFixed(2),
+        calls: totalCalls,
+        tokens: totalTokens,
+        // Trend API doesn't return errors field, calculate from usage
+        errorRate: '0.0',
+      }
     }
   } catch (e) { console.error('loadStats failed', e) }
   await loadPage(1, from, to)
