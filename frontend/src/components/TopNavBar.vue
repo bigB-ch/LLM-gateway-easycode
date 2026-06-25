@@ -6,7 +6,7 @@
       </router-link>
       <nav class="topbar-nav">
         <router-link to="/" exact-active-class="active">{{ t('home') }}</router-link>
-        <router-link to="/" :class="{ active: isConsole }">{{ t('console') }}</router-link>
+        <router-link to="/dashboard" :class="{ active: isConsole }">{{ t('console') }}</router-link>
       </nav>
     </div>
 
@@ -74,7 +74,7 @@ const avatarChar = computed(() => userName.value ? userName.value.charAt(0).toUp
 
 const isConsole = computed(() => {
   const p = route.path
-  return p === '/' || p.startsWith('/keys') || p.startsWith('/usage') || p.startsWith('/plans') || p.startsWith('/settings') || p.startsWith('/models')
+  return p.startsWith('/dashboard') || p.startsWith('/keys') || p.startsWith('/usage') || p.startsWith('/plans') || p.startsWith('/settings') || p.startsWith('/models')
 })
 
 const notifications = ref([])

@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { isAdmin } from './api'
 
 // Layouts
+import LandingLayout from './layouts/LandingLayout.vue'
 import UserLayout from './layouts/UserLayout.vue'
 import AdminLayout from './layouts/AdminLayout.vue'
 
@@ -36,13 +37,22 @@ const routes = [
   { path: '/login', component: Login },
   { path: '/register', component: Register },
 
-  // User portal
+  // Landing page (no sidebar)
+  {
+    path: '/',
+    component: LandingLayout,
+    meta: { auth: true },
+    children: [
+      { path: '', component: LandingPage },
+    ],
+  },
+
+  // User portal (with sidebar)
   {
     path: '/',
     component: UserLayout,
     meta: { auth: true },
     children: [
-      { path: '', component: LandingPage },
       { path: 'dashboard', component: Dashboard },
       { path: 'keys', component: Keys },
       { path: 'plans', component: Plans },
