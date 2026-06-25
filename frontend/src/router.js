@@ -8,6 +8,7 @@ import AdminLayout from './layouts/AdminLayout.vue'
 // User pages
 import Login from './pages/Login.vue'
 import Register from './pages/Register.vue'
+import LandingPage from './pages/LandingPage.vue'
 import Dashboard from './pages/Dashboard.vue'
 import Keys from './pages/Keys.vue'
 import Plans from './pages/Plans.vue'
@@ -41,7 +42,8 @@ const routes = [
     component: UserLayout,
     meta: { auth: true },
     children: [
-      { path: '', component: Dashboard },
+      { path: '', component: LandingPage },
+      { path: 'dashboard', component: Dashboard },
       { path: 'keys', component: Keys },
       { path: 'plans', component: Plans },
       { path: 'usage', component: Usage },
