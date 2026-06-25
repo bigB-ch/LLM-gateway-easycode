@@ -49,6 +49,11 @@ export const api = {
 
   getDashboard: () => request('/reports/dashboard'),
 
+  getModels: async () => {
+    const res = await fetch('/v1/models')
+    return res.json()
+  },
+
   getTrend: (days = 7) => request(`/reports/trend?days=${days}`),
 
   getUsage: (page = 1, dateFrom, dateTo) => {
