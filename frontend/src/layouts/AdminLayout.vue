@@ -25,6 +25,9 @@
         <router-view />
       </main>
     </div>
+    <footer class="app-footer">
+      <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">{{ icpCode }}</a>
+    </footer>
   </div>
 </template>
 
@@ -33,4 +36,5 @@ import { useI18n } from '../i18n'
 import TopNavBar from '../components/TopNavBar.vue'
 
 const { t } = useI18n()
+const icpCode = import.meta.env.VITE_ICP_CODE || 'ICP备XXXXXXXX号'
 </script>
