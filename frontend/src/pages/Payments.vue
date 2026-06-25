@@ -5,27 +5,6 @@
       <n-button size="small" @click="loadPayments">{{ t('refresh') }}</n-button>
     </n-space>
 
-    <!-- Fixed Payment QR Codes -->
-    <n-card :bordered="true" style="margin-bottom:16px">
-      <n-h3 style="margin:0 0 12px">固定收款码（手动审核模式）</n-h3>
-      <n-text depth="2" style="font-size:12px;display:block;margin-bottom:12px">
-        上传固定的支付宝/微信收款码图片链接。用户扫码付款后提交审核，管理员手动确认到账。
-      </n-text>
-      <n-space :size="16" wrap>
-        <n-form-item label="支付宝收款码链接" style="flex:1;min-width:250px">
-          <n-input v-model:value="alipayQrUrl" placeholder="https://..." />
-        </n-form-item>
-        <n-form-item label="微信收款码链接" style="flex:1;min-width:250px">
-          <n-input v-model:value="wechatQrUrl" placeholder="https://..." />
-        </n-form-item>
-      </n-space>
-      <n-text depth="3" style="font-size:11px;display:block;margin-bottom:12px">可将收款码上传到图床（如 imgse.com），粘贴图片链接即可</n-text>
-      <n-button type="primary" size="small" :loading="savingQr" @click="saveQrConfig">{{ savingQr ? '保存中...' : '保存收款码' }}</n-button>
-      <n-alert v-if="qrMsg" :type="qrMsg.includes('失败') ? 'error' : 'success'" :bordered="true" closable @close="qrMsg = ''" style="margin-top:8px;font-size:12px">
-        {{ qrMsg }}
-      </n-alert>
-    </n-card>
-
     <!-- Payment Review Table -->
     <n-card :bordered="true">
       <n-data-table :columns="tableColumns" :data="payments" :bordered="false" :min-height="80" />
@@ -37,8 +16,8 @@
 import { ref, h, onMounted } from 'vue'
 import { useMessage, useDialog } from 'naive-ui'
 import {
-  NCard, NDataTable, NH1, NH3, NButton, NInput, NSpace, NFormItem,
-  NAlert, NTag, NPopconfirm,
+  NCard, NDataTable, NH1, NButton, NSpace,
+  NTag, NPopconfirm,
 } from 'naive-ui'
 import { api } from '../api'
 import { useI18n } from '../i18n'
@@ -47,10 +26,6 @@ const message = useMessage()
 const dialog = useDialog()
 
 const payments = ref([])
-const alipayQrUrl = ref('')
-const wechatQrUrl = ref('')
-const savingQr = ref(false)
-const qrMsg = ref('')
 
 const tableColumns = [
   { title: '时间', key: 'created_at', render: (row) => h('span', { style: 'font-size:12px;white-space:nowrap' }, fmtTime(row.created_at)) },
@@ -87,24 +62,7 @@ const tableColumns = [
   },
 ]
 
-onMounted(() => { loadPayments(); loadQrConfig() })
-
-async function loadQrConfig() {
-  try {
-    const cfg = await api.getPaymentConfig()
-    alipayQrUrl.value = cfg.alipay_qr_url || ''
-    wechatQrUrl.value = cfg.wechat_qr_url || ''
-  } catch (e) { /* */ }
-}
-
-async function saveQrConfig() {
-  savingQr.value = true; qrMsg.value = ''
-  try {
-    await api.savePaymentConfig({ alipay_qr_url: alipayQrUrl.value, wechat_qr_url: wechatQrUrl.value })
-    qrMsg.value = '保存成功'
-  } catch (e) { qrMsg.value = '保存失败: ' + e.message }
-  finally { savingQr.value = false }
-}
+onMounted(() => { loadPayments() })
 
 async function loadPayments() {
   try { payments.value = (await api.getPendingPayments()).items || [] } catch (e) { /* */ }
