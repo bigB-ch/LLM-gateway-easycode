@@ -52,6 +52,11 @@ const routes = [
     meta: { auth: true },
     children: [
       { path: '', component: LandingPage },
+      { path: 'store', component: StorePage },
+      { path: 'store/:id', component: StoreDetail },
+      { path: 'orders', component: OrdersPage },
+      { path: 'custom', component: CustomTools },
+      { path: 'custom/:id', component: CustomDetail },
     ],
   },
 
@@ -69,11 +74,6 @@ const routes = [
       { path: 'settings', component: Settings },
       { path: 'models', component: Models },
       { path: 'models/:id', component: ModelDetail },
-      { path: 'store', component: StorePage },
-      { path: 'store/:id', component: StoreDetail },
-      { path: 'orders', component: OrdersPage },
-      { path: 'custom', component: CustomTools },
-      { path: 'custom/:id', component: CustomDetail },
     ],
   },
 
