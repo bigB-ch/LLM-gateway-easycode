@@ -17,6 +17,7 @@ from routes.users import router as users_router
 from routes.reports import router as reports_router
 from routes.plans import router as plans_router
 from routes.system import router as system_router
+from routes.store import router as store_router
 from consumer import run_consumer
 from middleware import setup_logging, RequestIDMiddleware
 import redis_client
@@ -74,6 +75,7 @@ app.include_router(users_router)
 app.include_router(reports_router)
 app.include_router(plans_router)
 app.include_router(system_router)
+app.include_router(store_router)
 
 
 @app.exception_handler(Exception)
