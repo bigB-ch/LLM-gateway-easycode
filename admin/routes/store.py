@@ -203,3 +203,232 @@ async def get_product(
     data = _product_to_dict(product)
     data["purchased"] = purchased
     return data
+
+
+# ── Order & Payment ──
+
+
+class CreateOrderRequest(BaseModel):
+    product_id: str
+    method: str = "alipay"
+
+
+@router.post("/orders")
+async def create_order(
+    req: CreateOrderRequest,
+    user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create an order for a product and get Alipay QR code."""
+    result = await db.execute(
+        select(Product).where(Product.id == req.product_id, Product.status == "active")
+    )
+    product = result.scalar_one_or_none()
+    if product is None:
+        raise HTTPException(status_code=404, detail={"error": "product_not_found"})
+
+    if req.method == "alipay":
+        from services.alipay import create_qr_payment
+        amount_yuan = product.price / 100
+        pay_result = await create_qr_payment(
+            amount_yuan=amount_yuan,
+            subject=f"购买 {product.name}",
+            notify_url="",
+            db=db,
+        )
+        if not pay_result.get("success"):
+            raise HTTPException(status_code=400, detail={"error": pay_result.get("error", "payment_failed")})
+
+        order = ProductOrder(
+            id=uuid.uuid4(),
+            user_id=user["user_id"],
+            product_id=product.id,
+            amount=product.price,
+            method="alipay",
+            status="pending",
+            out_trade_no=pay_result.get("out_trade_no"),
+            qr_code=pay_result.get("qr_code"),
+        )
+        db.add(order)
+        await db.commit()
+
+        return {
+            "order_id": str(order.id),
+            "qr_code": pay_result["qr_code"],
+            "out_trade_no": pay_result["out_trade_no"],
+            "amount_yuan": amount_yuan,
+            "status": "pending",
+        }
+    else:
+        raise HTTPException(status_code=400, detail={"error": "unsupported_payment_method"})
+
+
+@router.post("/orders/{order_id}/query")
+async def query_order_payment(
+    order_id: str,
+    user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Query payment status and auto-confirm if paid."""
+    result = await db.execute(
+        select(ProductOrder).where(
+            ProductOrder.id == order_id,
+            ProductOrder.user_id == user["user_id"],
+        )
+    )
+    order = result.scalar_one_or_none()
+    if order is None:
+        raise HTTPException(status_code=404, detail={"error": "order_not_found"})
+
+    if order.status == "paid":
+        return {"paid": True, "status": "paid"}
+
+    if order.method == "alipay" and order.out_trade_no:
+        from services.alipay import query_payment
+        pay_result = await query_payment(order.out_trade_no, db)
+        if pay_result.get("success") and pay_result.get("paid"):
+            order.status = "paid"
+            from datetime import datetime, timezone
+            order.paid_at = datetime.now(timezone.utc)
+
+            # Create download record
+            download = Download(
+                id=uuid.uuid4(),
+                order_id=order.id,
+                user_id=user["user_id"],
+                product_id=order.product_id,
+            )
+            db.add(download)
+            await db.commit()
+            return {"paid": True, "status": "paid"}
+
+    return {"paid": False, "status": order.status}
+
+
+@router.get("/orders")
+async def list_orders(
+    user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List current user's product orders."""
+    result = await db.execute(
+        select(ProductOrder)
+        .where(ProductOrder.user_id == user["user_id"])
+        .order_by(ProductOrder.created_at.desc())
+        .limit(50)
+    )
+    orders = result.scalars().all()
+
+    items = []
+    for o in orders:
+        prod_result = await db.execute(select(Product).where(Product.id == o.product_id))
+        product = prod_result.scalar_one_or_none()
+        items.append({
+            "id": str(o.id),
+            "product_id": str(o.product_id),
+            "product_name": product.name if product else "deleted",
+            "product_thumbnail": product.thumbnail_url if product else None,
+            "amount": o.amount,
+            "amount_yuan": round(o.amount / 100, 2),
+            "method": o.method,
+            "status": o.status,
+            "paid_at": o.paid_at.isoformat() if o.paid_at else None,
+            "created_at": o.created_at.isoformat(),
+        })
+    return {"items": items}
+
+
+# ── Download ──
+
+
+@router.get("/orders/{order_id}/download")
+async def request_download(
+    order_id: str,
+    user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get a signed download URL for a purchased product."""
+    result = await db.execute(
+        select(ProductOrder).where(
+            ProductOrder.id == order_id,
+            ProductOrder.user_id == user["user_id"],
+            ProductOrder.status == "paid",
+        )
+    )
+    order = result.scalar_one_or_none()
+    if order is None:
+        raise HTTPException(status_code=404, detail={"error": "order_not_found_or_not_paid"})
+
+    prod_result = await db.execute(select(Product).where(Product.id == order.product_id))
+    product = prod_result.scalar_one_or_none()
+    if product is None or not product.file_path:
+        raise HTTPException(status_code=404, detail={"error": "file_not_found"})
+
+    import os
+    if not os.path.isfile(product.file_path):
+        raise HTTPException(status_code=404, detail={"error": "file_not_found_on_server"})
+
+    # Update download count
+    dl_result = await db.execute(
+        select(Download).where(Download.order_id == order_id)
+    )
+    download_record = dl_result.scalar_one_or_none()
+    if download_record:
+        download_record.download_count += 1
+        from datetime import datetime, timezone
+        download_record.last_download_at = datetime.now(timezone.utc)
+        await db.commit()
+
+    # Generate a short-lived token for file download
+    from jwt_utils import create_download_token
+    download_token = create_download_token(
+        user_id=user["user_id"],
+        order_id=order_id,
+        expires_seconds=300,
+    )
+
+    return {
+        "download_url": f"/admin/api/store/download/file/{order_id}?token={download_token}",
+        "filename": os.path.basename(product.file_path),
+        "file_size": product.file_size,
+    }
+
+
+@router.get("/download/file/{order_id}")
+async def serve_file(
+    order_id: str,
+    token: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Serve the actual file with token verification."""
+    from jwt_utils import decode_token
+    import os
+    try:
+        payload = decode_token(token)
+        if payload.get("purpose") != "download" or payload.get("order_id") != order_id:
+            raise HTTPException(status_code=403, detail={"error": "invalid_token"})
+    except Exception:
+        raise HTTPException(status_code=403, detail={"error": "invalid_or_expired_token"})
+
+    from fastapi.responses import FileResponse
+    result = await db.execute(
+        select(ProductOrder).where(
+            ProductOrder.id == order_id,
+            ProductOrder.user_id == payload["sub"],
+            ProductOrder.status == "paid",
+        )
+    )
+    order = result.scalar_one_or_none()
+    if order is None:
+        raise HTTPException(status_code=404, detail={"error": "order_not_found"})
+
+    prod_result = await db.execute(select(Product).where(Product.id == order.product_id))
+    product = prod_result.scalar_one_or_none()
+    if product is None or not product.file_path:
+        raise HTTPException(status_code=404, detail={"error": "file_not_found"})
+
+    return FileResponse(
+        path=product.file_path,
+        filename=os.path.basename(product.file_path),
+        media_type="application/octet-stream",
+    )
