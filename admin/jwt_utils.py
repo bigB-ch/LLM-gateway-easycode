@@ -35,6 +35,19 @@ def decode_token(token: str) -> dict:
     return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
 
 
+def create_download_token(user_id: str, order_id: str, expires_seconds: int = 300) -> str:
+    """Create a short-lived token for file download authorization."""
+    payload = {
+        "sub": user_id,
+        "purpose": "download",
+        "order_id": order_id,
+        "type": "access",
+        "iat": datetime.now(timezone.utc),
+        "exp": datetime.now(timezone.utc) + timedelta(seconds=expires_seconds),
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+
 async def store_refresh_jti(redis, jti: str, user_id: str, ttl_days: int = REFRESH_TOKEN_EXPIRE_DAYS):
     await redis.setex(f"refresh_jti:{jti}", ttl_days * 86400, user_id)
 
