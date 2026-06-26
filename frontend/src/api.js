@@ -182,4 +182,40 @@ export const api = {
 
   saveSettings: (settings) =>
     request('/users/me/settings', { method: 'PUT', body: JSON.stringify({ settings }) }),
+
+  // ── Store / Marketplace ──
+  listProducts: (category) => {
+    const params = category ? `?category=${category}` : ''
+    return request(`/store/products${params}`)
+  },
+
+  getProduct: (id) => request(`/store/products/${id}`),
+
+  createOrder: (productId, method = 'alipay') =>
+    request('/store/orders', { method: 'POST', body: JSON.stringify({ product_id: productId, method }) }),
+
+  queryOrder: (orderId) =>
+    request(`/store/orders/${orderId}/query`, { method: 'POST' }),
+
+  listOrders: () => request('/store/orders'),
+
+  getDownloadUrl: (orderId) =>
+    request(`/store/orders/${orderId}/download`),
+
+  // ── Admin Store ──
+  adminListProducts: (category, status) => {
+    const params = new URLSearchParams()
+    if (category) params.set('category', category)
+    if (status) params.set('status', status)
+    return request(`/store/admin/products?${params}`)
+  },
+
+  adminCreateProduct: (data) =>
+    request('/store/admin/products', { method: 'POST', body: JSON.stringify(data) }),
+
+  adminUpdateProduct: (id, data) =>
+    request(`/store/admin/products/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  adminDeleteProduct: (id) =>
+    request(`/store/admin/products/${id}`, { method: 'DELETE' }),
 }
