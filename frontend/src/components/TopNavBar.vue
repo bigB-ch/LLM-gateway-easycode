@@ -6,6 +6,8 @@
       </router-link>
       <nav class="topbar-nav">
         <router-link to="/" exact-active-class="active">{{ t('home') }}</router-link>
+        <router-link to="/store" :class="{ active: isStore }">{{ t('store') }}</router-link>
+        <router-link to="/custom" :class="{ active: isCustom }">{{ t('customTools') }}</router-link>
         <router-link to="/dashboard" :class="{ active: isConsole }">{{ t('console') }}</router-link>
       </nav>
     </div>
@@ -71,6 +73,9 @@ const notiCount = ref(1)
 const isAdminUser = computed(() => isAdmin())
 
 const avatarChar = computed(() => userName.value ? userName.value.charAt(0).toUpperCase() : '?')
+
+const isStore = computed(() => route.path.startsWith('/store'))
+const isCustom = computed(() => route.path.startsWith('/custom'))
 
 const isConsole = computed(() => {
   const p = route.path

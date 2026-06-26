@@ -32,6 +32,14 @@ import Announcements from './pages/Announcements.vue'
 import AdminUserDaily from './pages/AdminUserDaily.vue'
 import AdminUserUsage from './pages/AdminUserUsage.vue'
 
+// Marketplace pages
+import StorePage from './pages/StorePage.vue'
+import StoreDetail from './pages/StoreDetail.vue'
+import OrdersPage from './pages/OrdersPage.vue'
+import CustomTools from './pages/CustomTools.vue'
+import CustomDetail from './pages/CustomDetail.vue'
+import AdminProducts from './pages/AdminProducts.vue'
+
 const routes = [
   // Public
   { path: '/login', component: Login },
@@ -61,6 +69,11 @@ const routes = [
       { path: 'settings', component: Settings },
       { path: 'models', component: Models },
       { path: 'models/:id', component: ModelDetail },
+      { path: 'store', component: StorePage },
+      { path: 'store/:id', component: StoreDetail },
+      { path: 'orders', component: OrdersPage },
+      { path: 'custom', component: CustomTools },
+      { path: 'custom/:id', component: CustomDetail },
     ],
   },
 
@@ -81,6 +94,7 @@ const routes = [
       { path: 'announcements', component: Announcements },
       { path: 'user-daily', component: AdminUserDaily },
       { path: 'user-usage', component: AdminUserUsage },
+      { path: 'products', component: AdminProducts },
     ],
   },
 

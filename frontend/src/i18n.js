@@ -3,7 +3,7 @@ const locale = { value: 'zh' }
 const messages = {
   zh: {
     // Nav
-    home: '首页', console: '控制台', marketplace: '模型广场', playground: 'Playground',
+    home: '首页', console: '控制台', store: 'AI 商店', customTools: '定制工具', marketplace: '模型广场', playground: 'Playground',
     dashboard: '数据看板', tokens: 'API Key 管理', usage: '使用日志', wallet: '钱包管理',
     settings: '个人设置', consoleGroup: '控制台', personalGroup: '个人中心',
     collapse: '收起侧边栏', logout: '退出登录', admin: '管理后台', profile: '个人设置',
@@ -13,6 +13,7 @@ const messages = {
     adminUsers: '用户管理', adminPlans: '套餐管理', adminUsage: '用量日志',
         adminUserDaily: '用户每日用量',
     adminUserUsage: '用户分模型用量',
+    adminProducts: '商品管理',
     adminBackToUser: '返回用户端', adminPanel: '管理后台',
     // Login
     loginTitle: '登录', loginSubtitle: '让 Coding 更简单', username: '用户名',
@@ -176,7 +177,7 @@ const messages = {
   },
   en: {
     // Nav
-    home: 'Home', console: 'Console', marketplace: 'Marketplace', playground: 'Playground',
+    home: 'Home', console: 'Console', store: 'Store', customTools: 'Custom Tools', marketplace: 'Marketplace', playground: 'Playground',
     dashboard: 'Dashboard', tokens: 'API Tokens', usage: 'Usage Logs', wallet: 'Wallet',
     settings: 'Settings', consoleGroup: 'Console', personalGroup: 'Personal',
     collapse: 'Collapse', logout: 'Logout', admin: 'Admin', profile: 'Settings',
@@ -187,7 +188,7 @@ const messages = {
     adminBreakers: 'Circuit Breakers', adminUsers: 'Users', adminPlans: 'Plans',
     adminUsage: 'Usage Logs',
         adminUserDaily: 'User Daily Usage',
-    adminUserUsage: 'User Model Usage', adminBackToUser: 'Back to User', adminPanel: 'Admin Panel',
+    adminUserUsage: 'User Model Usage', adminProducts: 'Products', adminBackToUser: 'Back to User', adminPanel: 'Admin Panel',
     // Login
     loginTitle: 'Login', loginSubtitle: 'Make Coding Easier', username: 'Username',
     password: 'Password', rememberMe: 'Remember Me', forgotPassword: 'Forgot Password?',
