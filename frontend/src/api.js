@@ -24,7 +24,7 @@ async function request(path, options = {}) {
       localStorage.removeItem('access_token')
       localStorage.removeItem('refresh_token')
       localStorage.removeItem('role')
-      window.location = '/login'
+      window.location = '/'
     }
     throw new Error('unauthorized')
   }
