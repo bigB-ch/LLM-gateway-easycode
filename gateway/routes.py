@@ -226,7 +226,11 @@ async def anthropic_messages(request: Request):
                     "error_msg": stream_error or "",
                     "ip": client_ip,
                 }
-                await redis.xadd("usage_log_stream", log_entry)
+                try:
+                    await redis.xadd("usage_log_stream", log_entry)
+                except Exception:
+                    logger = __import__('logging').getLogger('gateway')
+                    logger.error(f"Failed to write usage log for {request_id}")
                 return
 
             # Track content block state
@@ -477,7 +481,11 @@ async def anthropic_messages(request: Request):
                 "error_msg": "",
                 "ip": client_ip,
             }
-            await redis.xadd("usage_log_stream", log_entry)
+            try:
+                await redis.xadd("usage_log_stream", log_entry)
+            except Exception:
+                import logging as _lg
+                _lg.getLogger('gateway').error(f"Failed to write usage log for {request_id}")
 
             # Convert to Anthropic response format
             text = response.choices[0].message.content if response.choices else ""
@@ -678,7 +686,11 @@ async def chat_completions(request: Request):
                 "error_msg": "",
                 "ip": client_ip,
             }
-            await redis.xadd("usage_log_stream", log_entry)
+            try:
+                await redis.xadd("usage_log_stream", log_entry)
+            except Exception:
+                import logging as _lg
+                _lg.getLogger('gateway').error(f"Failed to write usage log for {request_id}")
 
             return response.model_dump()
 

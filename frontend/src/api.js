@@ -19,10 +19,13 @@ async function request(path, options = {}) {
   if (token) headers['Authorization'] = `Bearer ${token}`
   const res = await fetch(`${BASE}${path}`, { ...options, headers })
   if (res.status === 401 && path !== '/auth/login') {
-    localStorage.removeItem('access_token')
-    localStorage.removeItem('refresh_token')
-    localStorage.removeItem('role')
-    window.location = '/login'
+    // Only redirect if user had a token (session expired), not for anonymous visitors
+    if (token) {
+      localStorage.removeItem('access_token')
+      localStorage.removeItem('refresh_token')
+      localStorage.removeItem('role')
+      window.location = '/login'
+    }
     throw new Error('unauthorized')
   }
   if (!res.ok) {

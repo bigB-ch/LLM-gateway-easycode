@@ -170,7 +170,15 @@ html.dark .btn-outline:hover { background: #253348; border-color: #64748b; }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html, body, #app {
+html {
+  height: 100%;
+  overflow-y: scroll;
+  overflow-x: hidden;
+}
+
+html::-webkit-scrollbar { width: 0; }
+
+body, #app {
   height: 100%;
   font-family: var(--font);
   font-size: 14px;

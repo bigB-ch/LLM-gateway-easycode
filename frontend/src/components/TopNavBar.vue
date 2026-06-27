@@ -13,42 +13,47 @@
     </div>
 
     <div class="topbar-right">
-      <button class="topbar-bell" title="通知" @click.stop="showNoti = !showNoti">
-        &#x1F514;
-        <span class="bell-badge" v-if="notiCount > 0">{{ notiCount > 99 ? '99+' : notiCount }}</span>
-      </button>
-      <button class="topbar-icon-btn" title="切换主题" @click="toggleTheme">
-        {{ isDark ? '&#x263E;' : '&#x2600;' }}
-      </button>
-      <div class="topbar-avatar" @click.stop="menuOpen = !menuOpen">
-        <div class="avatar-circle">{{ avatarChar }}</div>
-        <span class="avatar-name">{{ userName }}</span>
-      </div>
-
-      <div v-if="menuOpen" class="topbar-dropdown" @click.stop>
-        <div class="dropdown-header">{{ userName }}</div>
-        <div class="dropdown-item" @click="goPage('/settings')">&#x2699;&#xFE0F; {{ t('profile') }}</div>
-        <div class="dropdown-item" @click="goPage('/keys')">&#x1F511; {{ t('tokens') }}</div>
-        <div class="dropdown-item" @click="goPage('/plans')">&#x1F4B0; {{ t('wallet') }}</div>
-        <div v-if="isAdminUser" class="dropdown-item" @click="goAdmin">&#x2696;&#xFE0F; {{ t('admin') }}</div>
-        <div class="dropdown-divider"></div>
-        <div class="dropdown-item danger" @click="logout">{{ t('logout') }}</div>
-      </div>
-
-      <!-- Notification panel -->
-      <div v-if="showNoti" class="noti-panel" @click.stop>
-        <div class="noti-header">
-          {{ t('notifications') }}
-          <button v-if="notifications.length" class="noti-clear" @click="clearAllNoti">{{ t('markAllRead') }}</button>
+      <template v-if="isLoggedIn">
+        <button class="topbar-bell" title="通知" @click.stop="showNoti = !showNoti">
+          &#x1F514;
+          <span class="bell-badge" v-if="notiCount > 0">{{ notiCount > 99 ? '99+' : notiCount }}</span>
+        </button>
+        <button class="topbar-icon-btn" title="切换主题" @click="toggleTheme">
+          {{ isDark ? '&#x263E;' : '&#x2600;' }}
+        </button>
+        <div class="topbar-avatar" @click.stop="menuOpen = !menuOpen">
+          <div class="avatar-circle">{{ avatarChar }}</div>
+          <span class="avatar-name">{{ userName }}</span>
         </div>
-        <div v-if="notifications.length" class="noti-list">
-          <div v-for="n in notifications" :key="n.id" class="noti-item" @click="dismissNoti(n.id)">
-            <div class="noti-title">{{ n.title }}</div>
-            <div class="noti-time">{{ n.time }}</div>
+
+        <div v-if="menuOpen" class="topbar-dropdown" @click.stop>
+          <div class="dropdown-header">{{ userName }}</div>
+          <div class="dropdown-item" @click="goPage('/settings')">&#x2699;&#xFE0F; {{ t('profile') }}</div>
+          <div class="dropdown-item" @click="goPage('/keys')">&#x1F511; {{ t('tokens') }}</div>
+          <div class="dropdown-item" @click="goPage('/plans')">&#x1F4B0; {{ t('wallet') }}</div>
+          <div v-if="isAdminUser" class="dropdown-item" @click="goAdmin">&#x2696;&#xFE0F; {{ t('admin') }}</div>
+          <div class="dropdown-divider"></div>
+          <div class="dropdown-item danger" @click="logout">{{ t('logout') }}</div>
+        </div>
+
+        <!-- Notification panel -->
+        <div v-if="showNoti" class="noti-panel" @click.stop>
+          <div class="noti-header">
+            {{ t('notifications') }}
+            <button v-if="notifications.length" class="noti-clear" @click="clearAllNoti">{{ t('markAllRead') }}</button>
           </div>
+          <div v-if="notifications.length" class="noti-list">
+            <div v-for="n in notifications" :key="n.id" class="noti-item" @click="dismissNoti(n.id)">
+              <div class="noti-title">{{ n.title }}</div>
+              <div class="noti-time">{{ n.time }}</div>
+            </div>
+          </div>
+          <div v-else class="noti-empty">{{ t('noNotifications') }}</div>
         </div>
-        <div v-else class="noti-empty">{{ t('noNotifications') }}</div>
-      </div>
+      </template>
+      <template v-else>
+        <router-link to="/login" class="topbar-login-btn">登录</router-link>
+      </template>
     </div>
   </header>
 </template>
@@ -71,6 +76,7 @@ const menuOpen = ref(false)
 const showNoti = ref(false)
 const notiCount = ref(1)
 const isAdminUser = computed(() => isAdmin())
+const isLoggedIn = computed(() => !!localStorage.getItem('access_token'))
 
 const avatarChar = computed(() => userName.value ? userName.value.charAt(0).toUpperCase() : '?')
 
@@ -223,4 +229,21 @@ function logout() {
 .noti-title { font-size: 13px; color: var(--text); line-height: 1.5; }
 .noti-time { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
 .noti-empty { padding: 32px 16px; text-align: center; color: var(--text-muted); font-size: 13px; }
+
+.topbar-login-btn {
+  padding: 6px 20px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: var(--primary);
+  color: #fff;
+  text-decoration: none;
+  transition: all 0.2s;
+  border: none;
+  cursor: pointer;
+  line-height: 1.6;
+}
+.topbar-login-btn:hover {
+  background: var(--primary-hover);
+}
 </style>

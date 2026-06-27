@@ -45,11 +45,10 @@ const routes = [
   { path: '/login', component: Login },
   { path: '/register', component: Register },
 
-  // Landing page (no sidebar)
+  // Landing page (no sidebar, public)
   {
     path: '/',
     component: LandingLayout,
-    meta: { auth: true },
     children: [
       { path: '', component: LandingPage },
       { path: 'store', component: StorePage },
