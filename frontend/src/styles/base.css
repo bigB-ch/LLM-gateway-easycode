@@ -624,12 +624,12 @@ a:hover { color: var(--primary-hover); }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #2a1f60, #362b70, #403a75);
+  background: linear-gradient(160deg, #f4f0ff 0%, #eef1ff 40%, #f0f7ff 100%);
   position: relative;
   overflow: hidden;
 }
 
-/* Animated aurora sweep */
+/* Animated aurora sweep - very subtle */
 .auth-page::before {
   content: '';
   position: absolute;
@@ -638,75 +638,74 @@ a:hover { color: var(--primary-hover); }
   width: 200%;
   height: 200%;
   background:
-    radial-gradient(ellipse 500px 300px at 15% 25%, rgba(147,51,234,0.6) 0%, transparent 50%),
-    radial-gradient(ellipse 400px 400px at 75% 60%, rgba(59,130,246,0.55) 0%, transparent 50%),
-    radial-gradient(ellipse 250px 250px at 40% 70%, rgba(236,72,153,0.45) 0%, transparent 50%);
-  animation: authAurora 5s ease-in-out infinite alternate;
+    radial-gradient(ellipse 500px 300px at 15% 25%, rgba(79,110,247,0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 400px 400px at 75% 60%, rgba(168,85,247,0.06) 0%, transparent 50%),
+    radial-gradient(ellipse 250px 250px at 40% 70%, rgba(52,211,153,0.05) 0%, transparent 50%);
+  animation: authAurora 8s ease-in-out infinite alternate;
   pointer-events: none;
 }
 
 @keyframes authAurora {
-  0% { transform: translate(0, 0) rotate(0deg); opacity: 0.8; }
-  50% { transform: translate(4%, 3%) rotate(3deg); opacity: 1; }
-  100% { transform: translate(-4%, -2%) rotate(-3deg); opacity: 1; }
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 0.5; }
+  100% { transform: translate(3%, 2%) rotate(2deg); opacity: 0.8; }
 }
 
-/* Large floating orb - magenta/pink */
+/* Floating orb - blue tint */
 .auth-page::after {
   content: '';
   position: absolute;
   bottom: -80px;
   right: -60px;
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(circle, rgba(236,72,153,0.35) 0%, rgba(236,72,153,0.12) 40%, transparent 70%);
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(79,110,247,0.08) 0%, transparent 60%);
   border-radius: 50%;
   pointer-events: none;
-  animation: authOrb1 8s ease-in-out infinite;
+  animation: authOrb1 12s ease-in-out infinite;
 }
 
 @keyframes authOrb1 {
-  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.6; }
-  50% { transform: translate(-80px, -40px) scale(1.4); opacity: 1; }
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-60px, -30px) scale(1.2); }
 }
 
-/* Floating orb - blue */
+/* Floating orb - purple tint */
 .auth-geo-ring {
   position: absolute;
   top: -120px;
   right: -60px;
-  width: 500px;
-  height: 500px;
-  background: radial-gradient(circle, rgba(59,130,246,0.3) 0%, transparent 55%);
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(168,85,247,0.06) 0%, transparent 55%);
   border-radius: 50%;
   pointer-events: none;
-  animation: authOrb2 7s ease-in-out infinite alternate;
+  animation: authOrb2 10s ease-in-out infinite alternate;
 }
 
 @keyframes authOrb2 {
-  from { transform: translate(0, 0) scale(1); opacity: 0.6; }
-  to { transform: translate(50px, 50px) scale(1.3); opacity: 1; }
+  from { transform: translate(0, 0) scale(1); }
+  to { transform: translate(40px, 40px) scale(1.2); }
 }
 
-/* Floating orb - purple */
+/* Floating orb - green tint */
 .auth-geo-dot {
   position: absolute;
-  bottom: -80px;
+  bottom: -60px;
   left: 2%;
-  width: 400px;
-  height: 400px;
-  background: radial-gradient(circle, rgba(147,51,234,0.3) 0%, transparent 50%);
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, rgba(52,211,153,0.05) 0%, transparent 50%);
   border-radius: 50%;
   pointer-events: none;
-  animation: authOrb3 10s ease-in-out infinite alternate;
+  animation: authOrb3 14s ease-in-out infinite alternate;
 }
 
 @keyframes authOrb3 {
-  from { transform: translate(0, 0) scale(1); opacity: 0.5; }
-  to { transform: translate(-40px, 30px) scale(1.5); opacity: 1; }
+  from { transform: translate(0, 0) scale(1); }
+  to { transform: translate(-30px, 20px) scale(1.3); }
 }
 
-/* Floating particles - 30 dots */
+/* Scattered dots - using site primary palette */
 .auth-geo-bar {
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -719,49 +718,49 @@ a:hover { color: var(--primary-hover); }
   width: 100%;
   height: 100%;
   background-image:
-    radial-gradient(4px 4px at 8% 12%, rgba(255,255,255,0.9) 0%, transparent 100%),
-    radial-gradient(3px 3px at 22% 35%, rgba(167,139,250,0.8) 0%, transparent 100%),
-    radial-gradient(5px 5px at 18% 70%, rgba(255,255,255,0.7) 0%, transparent 100%),
-    radial-gradient(3px 3px at 35% 15%, rgba(167,139,250,0.9) 0%, transparent 100%),
-    radial-gradient(4px 4px at 42% 55%, rgba(255,255,255,0.6) 0%, transparent 100%),
-    radial-gradient(3px 3px at 50% 85%, rgba(167,139,250,0.8) 0%, transparent 100%),
-    radial-gradient(5px 5px at 58% 22%, rgba(255,255,255,0.7) 0%, transparent 100%),
-    radial-gradient(3px 3px at 65% 40%, rgba(167,139,250,0.9) 0%, transparent 100%),
-    radial-gradient(4px 4px at 72% 65%, rgba(255,255,255,0.6) 0%, transparent 100%),
-    radial-gradient(3px 3px at 78% 10%, rgba(167,139,250,0.8) 0%, transparent 100%),
-    radial-gradient(5px 5px at 85% 45%, rgba(255,255,255,0.7) 0%, transparent 100%),
-    radial-gradient(3px 3px at 92% 75%, rgba(167,139,250,0.9) 0%, transparent 100%),
-    radial-gradient(4px 4px at 5% 48%, rgba(255,255,255,0.6) 0%, transparent 100%),
-    radial-gradient(3px 3px at 15% 88%, rgba(167,139,250,0.8) 0%, transparent 100%),
-    radial-gradient(5px 5px at 28% 60%, rgba(255,255,255,0.7) 0%, transparent 100%),
-    radial-gradient(3px 3px at 38% 8%, rgba(167,139,250,0.9) 0%, transparent 100%),
-    radial-gradient(4px 4px at 48% 30%, rgba(255,255,255,0.6) 0%, transparent 100%),
-    radial-gradient(3px 3px at 55% 78%, rgba(167,139,250,0.8) 0%, transparent 100%),
-    radial-gradient(5px 5px at 62% 50%, rgba(255,255,255,0.7) 0%, transparent 100%),
-    radial-gradient(3px 3px at 68% 18%, rgba(167,139,250,0.9) 0%, transparent 100%),
-    radial-gradient(4px 4px at 75% 50%, rgba(255,255,255,0.6) 0%, transparent 100%),
-    radial-gradient(3px 3px at 82% 82%, rgba(167,139,250,0.8) 0%, transparent 100%),
-    radial-gradient(5px 5px at 88% 30%, rgba(255,255,255,0.7) 0%, transparent 100%),
-    radial-gradient(3px 3px at 95% 55%, rgba(167,139,250,0.9) 0%, transparent 100%),
-    radial-gradient(4px 4px at 12% 50%, rgba(255,255,255,0.6) 0%, transparent 100%),
-    radial-gradient(3px 3px at 25% 42%, rgba(167,139,250,0.8) 0%, transparent 100%),
-    radial-gradient(5px 5px at 32% 25%, rgba(255,255,255,0.7) 0%, transparent 100%),
-    radial-gradient(3px 3px at 45% 43%, rgba(167,139,250,0.9) 0%, transparent 100%),
-    radial-gradient(4px 4px at 60% 55%, rgba(255,255,255,0.6) 0%, transparent 100%),
-    radial-gradient(3px 3px at 98% 85%, rgba(167,139,250,0.8) 0%, transparent 100%);
-  animation: authParticles 12s linear infinite;
+    radial-gradient(3px 3px at 8% 12%, rgba(79,110,247,0.15) 0%, transparent 100%),
+    radial-gradient(2px 2px at 22% 35%, rgba(168,85,247,0.12) 0%, transparent 100%),
+    radial-gradient(3px 3px at 18% 70%, rgba(79,110,247,0.1) 0%, transparent 100%),
+    radial-gradient(2px 2px at 35% 15%, rgba(168,85,247,0.15) 0%, transparent 100%),
+    radial-gradient(3px 3px at 42% 55%, rgba(79,110,247,0.08) 0%, transparent 100%),
+    radial-gradient(2px 2px at 50% 85%, rgba(168,85,247,0.12) 0%, transparent 100%),
+    radial-gradient(3px 3px at 58% 22%, rgba(79,110,247,0.1) 0%, transparent 100%),
+    radial-gradient(2px 2px at 65% 40%, rgba(168,85,247,0.15) 0%, transparent 100%),
+    radial-gradient(3px 3px at 72% 65%, rgba(79,110,247,0.08) 0%, transparent 100%),
+    radial-gradient(2px 2px at 78% 10%, rgba(168,85,247,0.12) 0%, transparent 100%),
+    radial-gradient(3px 3px at 85% 45%, rgba(79,110,247,0.1) 0%, transparent 100%),
+    radial-gradient(2px 2px at 92% 75%, rgba(168,85,247,0.15) 0%, transparent 100%),
+    radial-gradient(3px 3px at 5% 48%, rgba(79,110,247,0.08) 0%, transparent 100%),
+    radial-gradient(2px 2px at 15% 88%, rgba(168,85,247,0.12) 0%, transparent 100%),
+    radial-gradient(3px 3px at 28% 60%, rgba(79,110,247,0.1) 0%, transparent 100%),
+    radial-gradient(2px 2px at 38% 8%, rgba(168,85,247,0.15) 0%, transparent 100%),
+    radial-gradient(3px 3px at 48% 30%, rgba(79,110,247,0.08) 0%, transparent 100%),
+    radial-gradient(2px 2px at 55% 78%, rgba(168,85,247,0.12) 0%, transparent 100%),
+    radial-gradient(3px 3px at 62% 50%, rgba(79,110,247,0.1) 0%, transparent 100%),
+    radial-gradient(2px 2px at 68% 18%, rgba(168,85,247,0.15) 0%, transparent 100%),
+    radial-gradient(3px 3px at 75% 50%, rgba(79,110,247,0.08) 0%, transparent 100%),
+    radial-gradient(2px 2px at 82% 82%, rgba(168,85,247,0.12) 0%, transparent 100%),
+    radial-gradient(3px 3px at 88% 30%, rgba(79,110,247,0.1) 0%, transparent 100%),
+    radial-gradient(2px 2px at 95% 55%, rgba(168,85,247,0.15) 0%, transparent 100%),
+    radial-gradient(3px 3px at 12% 50%, rgba(79,110,247,0.08) 0%, transparent 100%),
+    radial-gradient(2px 2px at 25% 42%, rgba(168,85,247,0.12) 0%, transparent 100%),
+    radial-gradient(3px 3px at 32% 25%, rgba(79,110,247,0.1) 0%, transparent 100%),
+    radial-gradient(2px 2px at 45% 43%, rgba(168,85,247,0.15) 0%, transparent 100%),
+    radial-gradient(3px 3px at 60% 55%, rgba(79,110,247,0.08) 0%, transparent 100%),
+    radial-gradient(2px 2px at 98% 85%, rgba(168,85,247,0.12) 0%, transparent 100%);
+  animation: authParticles 15s linear infinite;
 }
 
 @keyframes authParticles {
-  from { transform: translateY(0); opacity: 1; }
-  to { transform: translateY(-50px); opacity: 0.3; }
+  from { transform: translateY(0); opacity: 0.6; }
+  to { transform: translateY(-40px); opacity: 0.1; }
 }
 
 .auth-geo-bar2 { display: none; }
 
 
 html.dark .auth-page {
-  background: linear-gradient(135deg, #1a1245, #221a55, #302a60);
+  background: linear-gradient(160deg, #0f172a 0%, #131b31 40%, #162032 100%);
 }
 
 .auth-topbar {
