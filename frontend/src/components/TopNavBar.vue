@@ -141,7 +141,7 @@ function logout() {
   localStorage.removeItem('access_token')
   localStorage.removeItem('refresh_token')
   localStorage.removeItem('role')
-  router.push('/')
+  window.location.href = '/'
 }
 </script>
 
