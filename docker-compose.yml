@@ -64,6 +64,9 @@ services:
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - DB_AUTO_CREATE=true
+      - STORE_FILES_DIR=/data/store-files
+    volumes:
+      - store_files:/data/store-files
     depends_on:
       postgres:
         condition: service_healthy
@@ -170,6 +173,7 @@ services:
 volumes:
   pg_data:
   redis_data:
+  store_files:
 
 networks:
   internal:

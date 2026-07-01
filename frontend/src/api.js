@@ -224,4 +224,24 @@ export const api = {
 
   adminDeleteProduct: (id) =>
     request(`/store/admin/products/${id}`, { method: 'DELETE' }),
+
+  // ── File Upload (multipart) ──
+  adminUploadProductFile: async (productId, file) => {
+    const token = getToken()
+    const form = new FormData()
+    form.append('file', file)
+    const res = await fetch(`${BASE}/store/admin/products/${productId}/upload`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'upload_failed' }))
+      throw new Error(err.error || err.detail?.error || 'upload_failed')
+    }
+    return res.json()
+  },
+
+  adminDeleteProductFile: (productId) =>
+    request(`/store/admin/products/${productId}/file`, { method: 'DELETE' }),
 }

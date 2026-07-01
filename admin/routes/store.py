@@ -1,6 +1,7 @@
 import uuid
 import json
-from fastapi import APIRouter, Depends, HTTPException, Query
+import os
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +13,8 @@ from models.download import Download
 from dependencies import get_current_user, require_admin
 
 router = APIRouter(prefix="/admin/api/store", tags=["store"])
+
+STORE_FILES_DIR = os.getenv("STORE_FILES_DIR", os.path.join(os.path.dirname(os.path.dirname(__file__)), "store-files"))
 
 
 class ProductCreate(BaseModel):
@@ -158,9 +161,100 @@ async def admin_delete_product(
     product = result.scalar_one_or_none()
     if product is None:
         raise HTTPException(status_code=404, detail={"error": "product_not_found"})
+
+    # Clean up uploaded file
+    if product.file_path and os.path.isfile(product.file_path):
+        try:
+            os.remove(product.file_path)
+        except OSError:
+            pass
+
     await db.delete(product)
     await db.commit()
     return {"message": "deleted"}
+
+
+# ── File Upload ──
+
+
+@router.post("/admin/products/{product_id}/upload")
+async def admin_upload_product_file(
+    product_id: str,
+    file: UploadFile,
+    _admin: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Upload a product file. Replaces any existing file for this product."""
+    result = await db.execute(select(Product).where(Product.id == product_id))
+    product = result.scalar_one_or_none()
+    if product is None:
+        raise HTTPException(status_code=404, detail={"error": "product_not_found"})
+
+    if not file.filename:
+        raise HTTPException(status_code=400, detail={"error": "no_filename"})
+
+    product_dir = os.path.join(STORE_FILES_DIR, product_id)
+    os.makedirs(product_dir, exist_ok=True)
+    dest = os.path.join(product_dir, file.filename)
+
+    # Remove old file if exists and differs
+    if product.file_path and product.file_path != dest and os.path.isfile(product.file_path):
+        try:
+            os.remove(product.file_path)
+        except OSError:
+            pass
+
+    # Write in 1MB chunks (handles large files without memory pressure)
+    file_size = 0
+    with open(dest, "wb") as f:
+        while chunk := await file.read(1024 * 1024):
+            f.write(chunk)
+            file_size += len(chunk)
+
+    product.file_path = os.path.abspath(dest)
+    product.file_size = file_size
+
+    # Auto-detect version from filename (e.g. "tool-v1.2.3.exe")
+    import re
+    vm = re.search(r'[vV]?(\d+\.\d+(?:\.\d+)?)', file.filename)
+    if vm:
+        product.version = vm.group(1)
+
+    await db.commit()
+    await db.refresh(product)
+    return _product_to_dict(product)
+
+
+@router.delete("/admin/products/{product_id}/file")
+async def admin_delete_product_file(
+    product_id: str,
+    _admin: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete the uploaded file for a product."""
+    result = await db.execute(select(Product).where(Product.id == product_id))
+    product = result.scalar_one_or_none()
+    if product is None:
+        raise HTTPException(status_code=404, detail={"error": "product_not_found"})
+
+    if product.file_path and os.path.isfile(product.file_path):
+        try:
+            os.remove(product.file_path)
+        except OSError:
+            raise HTTPException(status_code=500, detail={"error": "file_delete_failed"})
+
+    # Clean up empty product directory
+    pdir = os.path.dirname(product.file_path) if product.file_path else ""
+    if pdir and os.path.isdir(pdir):
+        try:
+            os.rmdir(pdir)
+        except OSError:
+            pass
+
+    product.file_path = None
+    product.file_size = None
+    await db.commit()
+    return {"message": "file_deleted"}
 
 
 # ── User-facing APIs ──
