@@ -158,6 +158,9 @@ export const api = {
   alipayRecharge: (amountYuan) =>
     request('/plans/recharge/alipay', { method: 'POST', body: JSON.stringify({ amount_yuan: amountYuan }) }),
 
+  alipayPagePayment: (amountYuan, returnUrl) =>
+    request('/plans/recharge/alipay/page', { method: 'POST', body: JSON.stringify({ amount_yuan: amountYuan, return_url: returnUrl }) }),
+
   queryAlipayPayment: (outTradeNo) =>
     request(`/plans/recharge/alipay/query?out_trade_no=${outTradeNo}`, { method: 'POST' }),
 

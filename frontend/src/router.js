@@ -27,6 +27,7 @@ import Users from './pages/Users.vue'
 import PlanManager from './pages/PlanManager.vue'
 import AdminUsage from './pages/AdminUsage.vue'
 import Payments from './pages/Payments.vue'
+import PaymentSettings from './pages/PaymentSettings.vue'
 import Pricing from './pages/Pricing.vue'
 import Announcements from './pages/Announcements.vue'
 import AdminUserDaily from './pages/AdminUserDaily.vue'
@@ -94,6 +95,7 @@ const routes = [
       { path: 'user-daily', component: AdminUserDaily },
       { path: 'user-usage', component: AdminUserUsage },
       { path: 'products', component: AdminProducts },
+      { path: 'payment-settings', component: PaymentSettings },
     ],
   },
 

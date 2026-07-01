@@ -17,6 +17,7 @@
           <router-link to="/admin/user-daily"><span class="nav-icon">&#x1F4C5;</span> {{ t('adminUserDaily') }}</router-link>
           <router-link to="/admin/user-usage"><span class="nav-icon">&#x1F4CA;</span> {{ t('adminUserUsage') }}</router-link>
           <router-link to="/admin/payments"><span class="nav-icon">&#x1F4B3;</span> 支付审核</router-link>
+          <router-link to="/admin/payment-settings"><span class="nav-icon">&#x2699;&#xFE0F;</span> 支付配置</router-link>
           <router-link to="/admin/pricing"><span class="nav-icon">&#x1F4C8;</span> 价格管理</router-link>
           <router-link to="/admin/products"><span class="nav-icon">&#x1F4E6;</span> {{ t('adminProducts') }}</router-link>
           <router-link to="/admin/announcements"><span class="nav-icon">&#x1F4E2;</span> 公告管理</router-link>
