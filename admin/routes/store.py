@@ -1,7 +1,6 @@
 import uuid
 import json
-import os
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,8 +12,6 @@ from models.download import Download
 from dependencies import get_current_user, require_admin
 
 router = APIRouter(prefix="/admin/api/store", tags=["store"])
-
-STORE_FILES_DIR = os.getenv("STORE_FILES_DIR", os.path.join(os.path.dirname(os.path.dirname(__file__)), "store-files"))
 
 
 class ProductCreate(BaseModel):
@@ -161,100 +158,9 @@ async def admin_delete_product(
     product = result.scalar_one_or_none()
     if product is None:
         raise HTTPException(status_code=404, detail={"error": "product_not_found"})
-
-    # Clean up uploaded file
-    if product.file_path and os.path.isfile(product.file_path):
-        try:
-            os.remove(product.file_path)
-        except OSError:
-            pass
-
     await db.delete(product)
     await db.commit()
     return {"message": "deleted"}
-
-
-# ── File Upload ──
-
-
-@router.post("/admin/products/{product_id}/upload")
-async def admin_upload_product_file(
-    product_id: str,
-    file: UploadFile,
-    _admin: dict = Depends(require_admin),
-    db: AsyncSession = Depends(get_db),
-):
-    """Upload a product file. Replaces any existing file for this product."""
-    result = await db.execute(select(Product).where(Product.id == product_id))
-    product = result.scalar_one_or_none()
-    if product is None:
-        raise HTTPException(status_code=404, detail={"error": "product_not_found"})
-
-    if not file.filename:
-        raise HTTPException(status_code=400, detail={"error": "no_filename"})
-
-    product_dir = os.path.join(STORE_FILES_DIR, product_id)
-    os.makedirs(product_dir, exist_ok=True)
-    dest = os.path.join(product_dir, file.filename)
-
-    # Remove old file if exists and differs
-    if product.file_path and product.file_path != dest and os.path.isfile(product.file_path):
-        try:
-            os.remove(product.file_path)
-        except OSError:
-            pass
-
-    # Write in 1MB chunks (handles large files without memory pressure)
-    file_size = 0
-    with open(dest, "wb") as f:
-        while chunk := await file.read(1024 * 1024):
-            f.write(chunk)
-            file_size += len(chunk)
-
-    product.file_path = os.path.abspath(dest)
-    product.file_size = file_size
-
-    # Auto-detect version from filename (e.g. "tool-v1.2.3.exe")
-    import re
-    vm = re.search(r'[vV]?(\d+\.\d+(?:\.\d+)?)', file.filename)
-    if vm:
-        product.version = vm.group(1)
-
-    await db.commit()
-    await db.refresh(product)
-    return _product_to_dict(product)
-
-
-@router.delete("/admin/products/{product_id}/file")
-async def admin_delete_product_file(
-    product_id: str,
-    _admin: dict = Depends(require_admin),
-    db: AsyncSession = Depends(get_db),
-):
-    """Delete the uploaded file for a product."""
-    result = await db.execute(select(Product).where(Product.id == product_id))
-    product = result.scalar_one_or_none()
-    if product is None:
-        raise HTTPException(status_code=404, detail={"error": "product_not_found"})
-
-    if product.file_path and os.path.isfile(product.file_path):
-        try:
-            os.remove(product.file_path)
-        except OSError:
-            raise HTTPException(status_code=500, detail={"error": "file_delete_failed"})
-
-    # Clean up empty product directory
-    pdir = os.path.dirname(product.file_path) if product.file_path else ""
-    if pdir and os.path.isdir(pdir):
-        try:
-            os.rmdir(pdir)
-        except OSError:
-            pass
-
-    product.file_path = None
-    product.file_size = None
-    await db.commit()
-    return {"message": "file_deleted"}
 
 
 # ── User-facing APIs ──
@@ -310,10 +216,11 @@ class CreateOrderRequest(BaseModel):
 @router.post("/orders")
 async def create_order(
     req: CreateOrderRequest,
+    request: Request,
     user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Create an order for a product and get Alipay QR code."""
+    """Create an order and redirect to Alipay for payment."""
     result = await db.execute(
         select(Product).where(Product.id == req.product_id, Product.status == "active")
     )
@@ -322,16 +229,8 @@ async def create_order(
         raise HTTPException(status_code=404, detail={"error": "product_not_found"})
 
     if req.method == "alipay":
-        from services.alipay import create_qr_payment
+        from services.alipay import create_page_payment
         amount_yuan = product.price / 100
-        pay_result = await create_qr_payment(
-            amount_yuan=amount_yuan,
-            subject=f"购买 {product.name}",
-            notify_url="",
-            db=db,
-        )
-        if not pay_result.get("success"):
-            raise HTTPException(status_code=400, detail={"error": pay_result.get("error", "payment_failed")})
 
         order = ProductOrder(
             id=uuid.uuid4(),
@@ -340,15 +239,35 @@ async def create_order(
             amount=product.price,
             method="alipay",
             status="pending",
-            out_trade_no=pay_result.get("out_trade_no"),
-            qr_code=pay_result.get("qr_code"),
         )
         db.add(order)
+        await db.flush()
+
+        scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
+        host = request.url.hostname
+        port = request.url.port
+        server_base = f"{scheme}://{host}" + (f":{port}" if port else "")
+        from urllib.parse import quote
+        store_return = f"{server_base}/admin/api/store/alipay/return?order_id={order.id}&frontend_url={quote(server_base + '/orders')}"
+        notify_url = f"{server_base}/admin/api/store/alipay/notify"
+
+        pay_result = await create_page_payment(
+            amount_yuan=amount_yuan,
+            subject=f"购买 {product.name}",
+            return_url=store_return,
+            notify_url=notify_url,
+            db=db,
+        )
+        if not pay_result.get("success"):
+            await db.rollback()
+            raise HTTPException(status_code=400, detail={"error": pay_result.get("error", "payment_failed")})
+
+        order.out_trade_no = pay_result.get("out_trade_no")
         await db.commit()
 
         return {
             "order_id": str(order.id),
-            "qr_code": pay_result["qr_code"],
+            "redirect_url": pay_result["redirect_url"],
             "out_trade_no": pay_result["out_trade_no"],
             "amount_yuan": amount_yuan,
             "status": "pending",
@@ -430,6 +349,107 @@ async def list_orders(
             "created_at": o.created_at.isoformat(),
         })
     return {"items": items}
+
+
+
+# ── Store Alipay Payment Callbacks ──
+
+
+@router.get("/alipay/return")
+async def store_alipay_return(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Handle Alipay return redirect after store purchase."""
+    from urllib.parse import unquote
+    import json as _json
+
+    params = dict(request.query_params)
+    order_id = params.pop("order_id", "")
+    frontend_url = unquote(params.pop("frontend_url", "/"))
+
+    from services.alipay import get_alipay_config, verify_callback_sign
+    cfg = await get_alipay_config(db)
+    alipay_public_key = cfg.get("alipay_public_key", "")
+
+    if alipay_public_key:
+        if not verify_callback_sign(params.copy(), alipay_public_key):
+            from fastapi.responses import RedirectResponse
+            return RedirectResponse(url=f"{frontend_url}?payment=fail&reason=verify_failed")
+
+    out_trade_no = params.get("out_trade_no", "")
+    payment_status = "pending"
+
+    if out_trade_no:
+        from services.alipay import query_payment
+        try:
+            pay_result = await query_payment(out_trade_no, db)
+            if pay_result.get("paid"):
+                # Update order status
+                order_result = await db.execute(
+                    select(ProductOrder).where(ProductOrder.out_trade_no == out_trade_no)
+                )
+                order = order_result.scalar_one_or_none()
+                if order and order.status == "pending":
+                    order.status = "paid"
+                    from datetime import datetime, timezone
+                    order.paid_at = datetime.now(timezone.utc)
+                    # Create download record
+                    download = Download(
+                        id=uuid.uuid4(),
+                        order_id=order.id,
+                        user_id=order.user_id,
+                        product_id=order.product_id,
+                    )
+                    db.add(download)
+                    await db.commit()
+                payment_status = "success"
+        except Exception:
+            pass
+
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url=f"{frontend_url}?payment={payment_status}&out_trade_no={out_trade_no}")
+
+
+@router.post("/alipay/notify")
+async def store_alipay_notify(request: Request):
+    """Alipay async notification for store purchases."""
+    from database import async_session as _session
+    async with _session() as db:
+        body = await request.body()
+        from urllib.parse import parse_qs
+        params = {k: v[0] for k, v in parse_qs(body.decode()).items()}
+
+        from services.alipay import get_alipay_config, verify_callback_sign
+        cfg = await get_alipay_config(db)
+        alipay_public_key = cfg.get("alipay_public_key", "")
+        if not alipay_public_key or not verify_callback_sign(params.copy(), alipay_public_key):
+            return "fail"
+
+        trade_status = params.get("trade_status", "")
+        out_trade_no = params.get("out_trade_no", "")
+
+        if trade_status == "TRADE_SUCCESS" and out_trade_no:
+            order_result = await db.execute(
+                select(ProductOrder).where(
+                    ProductOrder.out_trade_no == out_trade_no,
+                    ProductOrder.status == "pending",
+                )
+            )
+            order = order_result.scalar_one_or_none()
+            if order:
+                order.status = "paid"
+                from datetime import datetime, timezone
+                order.paid_at = datetime.now(timezone.utc)
+                download = Download(
+                    id=uuid.uuid4(),
+                    order_id=order.id,
+                    user_id=order.user_id,
+                    product_id=order.product_id,
+                )
+                db.add(download)
+                await db.commit()
+    return "success"
 
 
 # ── Download ──

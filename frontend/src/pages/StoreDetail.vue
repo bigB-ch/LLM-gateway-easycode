@@ -79,10 +79,7 @@ async function startOrder() {
   ordering.value = true
   try {
     const res = await api.createOrder(product.value.id, 'alipay')
-    qrCode.value = res.qr_code
-    orderId.value = res.order_id
-    ordering.value = false
-    startPolling()
+    window.location.href = res.redirect_url
   } catch (e) {
     ordering.value = false
     alert('下单失败：' + e.message)

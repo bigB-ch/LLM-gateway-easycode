@@ -89,7 +89,12 @@ async def create_qr_payment(
             data=urlencode(params),
             headers={"Content-Type": "application/x-www-form-urlencoded"},
         )
-    resp_data = resp.json()
+    raw = resp.content
+    try:
+        body = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        body = raw.decode("gbk")
+    resp_data = json.loads(body)
     alipay_resp = resp_data.get("alipay_trade_precreate_response", {})
 
     if alipay_resp.get("code") == "10000":
@@ -189,7 +194,12 @@ async def query_payment(out_trade_no: str, db) -> dict:
             data=urlencode(params),
             headers={"Content-Type": "application/x-www-form-urlencoded"},
         )
-    resp_data = resp.json()
+    raw = resp.content
+    try:
+        body = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        body = raw.decode("gbk")
+    resp_data = json.loads(body)
     alipay_resp = resp_data.get("alipay_trade_query_response", {})
 
     if alipay_resp.get("code") == "10000":
