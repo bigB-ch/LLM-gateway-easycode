@@ -178,3 +178,4 @@ volumes:
 networks:
   internal:
     driver: bridge
+  store_files:
