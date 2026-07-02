@@ -149,7 +149,6 @@ function fmtSize(bytes) {
 
 function resetForm() {
   Object.assign(form, { name: '', description: '', category: 'agent', price: 0, version: '', system_requirements: '' })
-  editItem.value = null
   selectedFile.value = null
   uploadMsg.value = ''
 }
@@ -164,14 +163,21 @@ async function load() {
 async function save() {
   try {
     let result
+    const isNew = !editItem.value?.id
     if (editItem.value?.id) {
       result = await api.adminUpdateProduct(editItem.value.id, form)
     } else {
       result = await api.adminCreateProduct({ ...form })
     }
-    if (!editItem.value?.id) editItem.value = result
-    showForm.value = false
-    resetForm()
+    editItem.value = result
+    if (isNew) {
+      uploadMsg.value = '创建成功，可以上传文件了'
+      uploadMsgType.value = 'success'
+    } else {
+      showForm.value = false
+      resetForm()
+      load()
+    }
     load()
   } catch (e) { alert('操作失败: ' + e.message) }
 }
@@ -251,7 +257,24 @@ async function deleteFile() {
   }
 }
 
-watch(showForm, (v) => { if (v) resetForm() })
+watch(showForm, (v) => {
+  if (v) {
+    if (editItem.value?.id) {
+      Object.assign(form, {
+        name: editItem.value.name,
+        description: editItem.value.description || '',
+        category: editItem.value.category,
+        price: editItem.value.price_yuan,
+        version: editItem.value.version || '',
+        system_requirements: editItem.value.system_requirements || '',
+      })
+    } else {
+      resetForm()
+    }
+    selectedFile.value = null
+    uploadMsg.value = ''
+  }
+})
 load()
 </script>
 

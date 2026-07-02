@@ -1,7 +1,7 @@
 import uuid
 import json
 import os
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
